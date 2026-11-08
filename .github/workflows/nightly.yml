@@ -1,0 +1,110 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/nightly.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+# ============================================================
+name: Nightly Full Refresh
+
+# TRAPP2 is the US-EQUITIES repo. This nightly does EQUITIES data only:
+#   quotes + fundamentals → 5-year price history.
+#
+# The macro/FRED pull, signal stack, regime classification, Markov transitions,
+# and ETF holdings have been REMOVED from here — those belong to the FX/global
+# repo (TRAPP2-1), which already runs the full macro → signals → regime →
+# transitions chain in its own nightly. Keeping them here was redundant work and
+# caused two repos to publish competing regime_current.json snapshots (the
+# "regime flips between refreshes" race). The app reads macro + regime from
+# TRAPP2-1 now, so this repo no longer needs to produce them.
+#
+# 00:30 UTC = 8:30 PM ET (EDT). Runs after US close, before pre-market data.
+
+on:
+  schedule:
+  # z150: off GitHub's busy top / half of the hour, and 10 min after TRAPP2-2's same job (spreads the Yahoo load)
+    - cron: '7 1 * * *'        # 2107 EDT / 2007 EST - after TRAPP2-3's nightly
+  workflow_dispatch:
+
+concurrency:
+  group: trapp2-equities-nightly
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install core requirements (must succeed)
+        run: pip install requests pandas "yfinance>=0.2.50,<0.3"
+
+      - name: Fetch quotes + fundamentals (parallel; profiles every 48-96 h)
+        env:
+          FETCH_WORKERS: '6'
+          FETCH_BUDGET_MIN: '150'
+        run: python pipeline/fetch_data.py
+
+      # HUMAN CORRECTIONS OUTRANK PULLED DATA. Applies active XTRAPP overrides to
+      # data/master.json right after the pull - before signals, regime, the tape,
+      # and every cross-repo reader (bot, research, Supabase). master.csv stays
+      # pure-pulled; the app layers the same corrections itself. Never blocks.
+      - name: Apply human corrections (XTRAPP)
+        run: python pipeline/human_corrections.py master
+        continue-on-error: true
+
+      - name: Top up price history (incremental — appends latest settled day only)
+        # History backfill (full 20 years) is owned by history-20y.yml, which runs
+        # daily in 4 batches. Here we only append the newest settled day to tickers
+        # already current, so nightly stays fast and never triggers a full refetch.
+        # --max-age-days 1 = skip any ticker whose history already ends yesterday.
+        run: python pipeline/fetch_history.py --max-age-days 1
+
+      # NOTE (removed — now in TRAPP2-1, the FX/global repo):
+      #   - Fetch FRED macro series      (pipeline/fetch_macro.py)
+      #   - Compute signals              (pipeline/compute_signals.py)
+      #   - Classify regime + snapshot   (pipeline/classify_regime.py)
+      #   - Compute Markov transitions   (pipeline/compute_transitions.py)
+      #   - Fetch ETF holdings           (pipeline/fetch_etf_holdings.py)
+      # Company facts + leadership run on their own clocks (company-facts.yml,
+      # leadership*.yml). This nightly is now purely equities market data.
+
+      - name: Commit & push (nightly scope only)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # SCOPED to what this job writes (quotes, profile cache, history top-up).
+          # The old blanket `git add -A data/` + `checkout --ours -- data/` could
+          # overwrite sibling workflows' files on a push conflict.
+          OWN="data/master.csv data/master.json data/.profile_cache.json data/history/ data/history_manifest.json"
+          for p in $OWN; do git add -A "$p" 2>/dev/null || true; done
+          if git diff --staged --quiet; then
+            echo "No nightly changes to commit"
+          else
+            git commit -m "Nightly equities refresh $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            # Park anything this job did NOT stage (e.g. data/.profile_cache.json),
+            # so a retry merge is never blocked by stray working-tree edits.
+            git stash push --include-untracked -q -m leftovers 2>/dev/null || true
+            # Generated data - on conflict with a parallel run, OURS wins for OUR files.
+            for i in 1 2 3 4 5; do
+              if git push; then echo "Push succeeded on attempt $i"; break; fi
+              echo "Push attempt $i failed - merging remote with OURS winning conflicts"
+              git fetch origin
+              git merge -X ours origin/${{ github.ref_name }} --no-edit 2>/dev/null || true
+              if [ -f .git/MERGE_HEAD ] || [ -d .git/rebase-merge ]; then
+                for p in $OWN; do git checkout --ours -- "$p" 2>/dev/null || true; git add -A "$p" 2>/dev/null || true; done
+                git commit --no-edit 2>/dev/null || true
+              fi
+              sleep $((i * 2))
+            done
+          fi
