@@ -1,0 +1,93 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/leadership-historyH-M.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+# ============================================================
+name: Leadership History Refresh H-M (Weekly)
+
+# Runs CEO/leadership career history fetch (Wikidata) for tickers starting
+# with letters H through M, weekly on Monday 04:00 UTC.
+#
+# This workflow + leadership-history-nz.yml together cover all tickers.
+# The split keeps each run well under GitHub Actions' 60-minute soft cap
+# even when the population doubles (Wikidata averages 1.5s/query + 1.5s for
+# the career fetch, so ~3s per person; a few hundred people ÷ 2 keeps us
+# in safe territory).
+#
+# Why a single-letter split (A-M vs N-Z) instead of round-robin or chunking
+# by count: it's deterministic, easy to reason about in logs, and lets each
+# workflow finish independently if the other fails.
+
+on:
+  schedule:
+  # z150: off GitHub's busy top / half of the hour, and 10 min after TRAPP2-2's same job (spreads the Yahoo load)
+    - cron: '23 10 * * MON'  # Mondays 10:23 UTC (after TRAPP2-3's 04:23-06:23)
+  workflow_dispatch:
+
+concurrency:
+  group: trapp2-leadership-hm
+  cancel-in-progress: false
+
+jobs:
+  refresh-leadership-hm:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      - name: Fetch CEO/leadership career history A-M (Wikidata)
+        run: |
+          echo "=== company files in scope (H-M) ==="
+          ls data/company/ | grep -v '^_' | awk 'toupper(substr($0,1,1)) >= "H" && toupper(substr($0,1,1)) <= "M"' | wc -l
+          echo "tickers"
+          echo "=== running fetch_ceo_tracker.py --start H --end M ==="
+          python pipeline/fetch_ceo_tracker.py --start H --end M || echo "CEO tracker H-M had errors but continuing"
+          echo "=== leadership files after run ==="
+          ls -la data/leadership/by_ticker/ 2>/dev/null | wc -l || echo "no by_ticker dir"
+          ls -la data/leadership/by_person/ 2>/dev/null | wc -l || echo "no by_person dir"
+
+      - name: Commit & push
+        # These are GENERATED data files — on any conflict with a parallel run,
+        # the latest run's content should simply win. We never hand-rebase JSON
+        # (git can't auto-merge it). Strategy: commit, then on push failure pull
+        # with "ours" winning conflicts, and retry.
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/leadership/
+          if git diff --staged --quiet; then
+            echo "No leadership H-M changes to commit"
+          else
+            git commit -m "Leadership history refresh H-M $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for i in 1 2 3 4 5; do
+              if git push; then
+                echo "Push succeeded on attempt $i"
+                break
+              fi
+              echo "Push attempt $i failed — merging remote with OURS winning conflicts"
+              git fetch origin
+              # Merge remote but keep OUR version of any conflicting generated file.
+              git merge -X ours origin/main 2>/dev/null || git merge -X ours origin/master 2>/dev/null || true
+              # Belt-and-suspenders: if a merge is mid-flight, force-resolve to ours.
+              if [ -d .git/rebase-merge ] || [ -f .git/MERGE_HEAD ]; then
+                git checkout --ours -- data/leadership/ 2>/dev/null || true
+                git add -A data/leadership/ 2>/dev/null || true
+                git commit --no-edit 2>/dev/null || true
+              fi
+              sleep 5
+            done
+          fi
