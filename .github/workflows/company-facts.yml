@@ -1,1 +1,91 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/company-facts.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+# ============================================================
+name: Company Facts Refresh (Monthly)
 
+# Runs company facts fetch (Wikidata) on the 1st of every month at 02:00 UTC
+# + manual trigger for ad-hoc refreshes.
+#
+# Company facts fetches executives, board, headquarters, ISIN, etc. from Wikidata.
+# This is slow (~1.5s per equity) so it's separated from the nightly refresh.
+# Boards & exec teams change slowly but more often than quarterly is reasonable —
+# monthly catches CEO transitions, board changes, and new exec hires with about
+# the right cadence vs. cost.
+#
+# Last successful run: 54.5 minutes for ~300 equities. Comfortably under the
+# 120-minute timeout. If the ticker list doubles, this may need to be split
+# A-M / N-Z like leadership-history.yml is.
+
+on:
+  schedule:
+  # z150: off GitHub's busy top / half of the hour, and 10 min after TRAPP2-2's same job (spreads the Yahoo load)
+    - cron: '33 4 1 * *'  # 1st of every month, 04:33 UTC (TRAPP2-3 runs 02:33)
+  workflow_dispatch:
+
+concurrency:
+  group: trapp2-company-facts
+  cancel-in-progress: false
+
+jobs:
+  refresh-company-facts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      - name: Fetch company facts (Wikidata)
+        # Pulls executives, board, products, countries, ISIN, HQ etc. from Wikidata.
+        # Free, no API key, CC0-licensed data. Rate-limited to 1 req/sec.
+        # Best-effort: individual ticker failures don't break the workflow.
+        run: |
+          echo "=== tickers.txt diagnostic ==="
+          if [ -f data/tickers.txt ]; then
+            echo "data/tickers.txt EXISTS — $(wc -l < data/tickers.txt) lines"
+            echo "First 10 non-comment lines:"
+            grep -v '^#' data/tickers.txt | grep -v '^$' | head -10
+          else
+            echo "data/tickers.txt MISSING — script will use built-in fallback (85 tickers)"
+          fi
+          echo "=== existing data/company/ contents ==="
+          ls -la data/company/ 2>/dev/null | head -20 || echo "(directory does not exist yet)"
+          echo "=== running fetch_company_facts.py ==="
+          python pipeline/fetch_company_facts.py || echo "Company facts step had errors but continuing"
+          echo "=== company files after run ==="
+          ls data/company/ | wc -l
+          ls data/company/ | head -20
+
+      - name: Commit company facts
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/company/
+          if git diff --staged --quiet; then
+            echo "No company-facts changes to commit"
+          else
+            git commit -m "Company facts refresh $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for i in 1 2 3; do
+              if git push; then break; fi
+              git fetch origin
+
+              git merge -X ours origin/main 2>/dev/null || git merge -X ours origin/master 2>/dev/null || true
+
+              if [ -f .git/MERGE_HEAD ] || [ -d .git/rebase-merge ]; then git checkout --ours -- data/company/ 2>/dev/null || true; git add -A data/company/ 2>/dev/null || true; git commit --no-edit 2>/dev/null || true; fi
+              sleep 4
+            done
+          fi
