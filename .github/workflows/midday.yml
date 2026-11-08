@@ -1,0 +1,119 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/midday.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+# ============================================================
+name: Mid-Day Refresh (Macro + Regime)
+
+# Runs mid-day every weekday. Pushed 1.5 hours earlier vs the previous schedule
+# (18:00 UTC → 16:30 UTC) to compensate for GitHub Actions queue latency.
+# Target: roughly 11 AM ET (EDT) when the cron is dispatched promptly. With
+# typical queue lag the run lands closer to 12:30-1 PM ET, which is what we want.
+#
+# EDT 11:00 AM = 15:00 UTC, EST 11:00 AM = 16:00 UTC.
+# Use 15:30 UTC as compromise — slightly early in winter, slightly early in summer.
+#
+# Skips fetch_history.py (that's nightly only). Re-runs macro + signal stack.
+
+on:
+  schedule:
+    # z150: twice a weekday - 0811 ET (before the open, so the bot's first passes see fresh macro, signals
+    # and regime) and 1136 ET; four minutes after TRAPP2 / -1 / -2's 0807 / 1132 to spread the load.
+    # Was 1130 EDT only, which slid to 1030 in winter.
+    - cron: '14 12 * * 1-5'    # 0814 EDT
+    - cron: '14 13 * * 1-5'    # 0814 EST
+    - cron: '39 15 * * 1-5'    # 1139 EDT
+    - cron: '39 16 * * 1-5'    # 1139 EST
+  workflow_dispatch:
+
+concurrency:
+  group: trapp2-regime
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    # z147: GitHub cron runs on UTC. Each Eastern time is listed for EDT (UTC-4) and EST (UTC-5);
+    # this job keeps only the run that lands on the intended ET time (the other one skips in seconds).
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.g.outputs.run }}
+    steps:
+      - id: g
+        name: Eastern-time gate
+        run: |
+          if [ "${{ github.event_name }}" != "schedule" ]; then echo "run=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          S="${{ github.event.schedule }}"
+          OFF=$(TZ=America/New_York date +%z); OFFH=$((10#${OFF:1:2}))
+          UM=$(echo "$S" | awk '{print $1}'); UH=$(echo "$S" | awk '{print $2}')
+          ETH=$(( (10#$UH - OFFH + 24) % 24 )); ETM=$(printf '%02d' "$UM")
+          case " 8:14 11:39 " in *" ${ETH}:${ETM} "*) RUN=true ;; *) RUN=false ;; esac
+          echo "schedule '$S' = ${ETH}:${ETM} ET today (UTC${OFF}) -> run=${RUN}"
+          echo "run=${RUN}" >> "$GITHUB_OUTPUT"
+
+  refresh:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      - name: Fetch FRED macro series
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python pipeline/fetch_macro.py
+
+      - name: Compute signals
+        run: python pipeline/compute_signals.py
+
+      - name: Classify regime + append snapshot
+        run: python pipeline/classify_regime.py
+
+      - name: Compute Markov transitions
+        run: python pipeline/compute_transitions.py
+
+      - name: Commit & push (midday scope only)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # SCOPED to what this job writes. A blanket `git add -A data/` plus the
+          # blanket `checkout --ours -- data/` below used to let a mid-day run
+          # overwrite sibling outputs (intraday tape, history, leadership, ...)
+          # whenever a push conflict hit.
+          OWN="data/macro/ data/signals.json data/regime_current.json data/regime_history.json"
+          for p in $OWN; do git add -A "$p" 2>/dev/null || true; done
+          echo "=== files staged ==="
+          git diff --staged --name-only
+          if git diff --staged --quiet; then
+            echo "No regime changes to commit"
+          else
+            git commit -m "Mid-day regime refresh $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            # Park anything this job did NOT stage, so a retry merge is never blocked
+            # by stray working-tree edits (and never commits them).
+            git stash push --include-untracked -q -m midday-leftovers 2>/dev/null || true
+            for i in 1 2 3 4 5; do
+              if git push; then echo "Pushed on attempt $i"; break; fi
+              echo "Push rejected — reconciling (ours wins for OUR files) and retrying."
+              git fetch origin
+              git merge -X ours origin/${{ github.ref_name }} --no-edit 2>/dev/null || true
+              if [ -f .git/MERGE_HEAD ]; then
+                for p in $OWN; do git checkout --ours -- "$p" 2>/dev/null || true; git add -A "$p" 2>/dev/null || true; done
+                git commit --no-edit 2>/dev/null || true
+              fi
+              sleep $((i * 2))
+            done
+          fi
