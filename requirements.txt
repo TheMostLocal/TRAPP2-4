@@ -1,0 +1,12 @@
+yfinance>=0.2.50,<0.3
+# ETF holdings fetcher — issuer-direct CSV downloads via maintained third-party
+# library that handles iShares/SSGA/Vanguard/Invesco endpoint quirks and rotates
+# headers as issuers change their bot-blocking strategy. The library has
+# always-green daily CI badges so it works from datacenter IPs (GitHub Actions).
+etf-scraper>=0.1.1
+# Explicit pins for our own scripts (yfinance brings these transitively but
+# pinning makes the build reproducible and surface-area visible)
+requests>=2.31
+pandas>=2.0
+# FRED API client used by fetch_macro.py
+fredapi>=0.5.1
