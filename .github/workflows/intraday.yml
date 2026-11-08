@@ -1,0 +1,82 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/intraday.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+#  Intraday: the 15-minute quote + tape loop (shared scripts from TRAPP2-CORE), offset 7 minutes. Secrets:
+#  ALPACA_KEY_ID / ALPACA_SECRET_KEY, SUPABASE_LIVE_URL / SUPABASE_LIVE_KEY (same values as the other books).
+# ============================================================
+name: Intraday Quotes + 15-min Tape
+
+on:
+  schedule:
+    - cron: '7 8-23 * * 1-5'      # hourly starts 08-23 UTC (pre-market 04:00 ET to after hours); TRAPP2-4 passes at :07, :22, :37, :52
+  workflow_dispatch:
+    inputs:
+      force_tape:
+        description: 'Write an intraday tape point even outside session hours'
+        type: boolean
+        required: false
+        default: false
+      single:
+        description: 'One pass only (no loop)'
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: trapp2-quote-push
+  cancel-in-progress: false     # never kill a run mid-write
+
+jobs:
+  quotes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360          # GitHub's per-job maximum; the loop stops itself at 5h40m
+    permissions:
+      contents: write
+      actions: write                # z161: the loop queues its own next run (GitHub's scheduler can go hours silent)
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Shared pipeline (TRAPP2-CORE, z158)
+        uses: actions/checkout@v4
+        continue-on-error: true
+        with:
+          repository: TheMostLocal/TRAPP2-CORE
+          path: _core
+      - name: Use the shared scripts (+ Alpaca / Supabase live keys when set)
+        env:
+          AK: ${{ secrets.ALPACA_KEY_ID }}
+          AS: ${{ secrets.ALPACA_SECRET_KEY }}
+          LU: ${{ secrets.SUPABASE_LIVE_URL }}
+          LK: ${{ secrets.SUPABASE_LIVE_KEY }}
+        run: |
+          if [ -d _core/pipeline ]; then cp -r _core/pipeline/. pipeline/; echo "CORE_DIR=_core" >> "$GITHUB_ENV"; echo "shared pipeline: TRAPP2-CORE @ $(git -C _core rev-parse --short HEAD)"; else echo "::notice::TRAPP2-CORE not available - this repo's own scripts"; fi
+          if [ -n "$AK" ] && [ -n "$AS" ]; then echo "ALPACA_KEY_ID=$AK" >> "$GITHUB_ENV"; echo "ALPACA_SECRET_KEY=$AS" >> "$GITHUB_ENV"; echo "Alpaca: on"; else echo "Alpaca: keys not set - Yahoo"; fi
+          if [ -n "$LU" ] && [ -n "$LK" ]; then echo "SUPABASE_LIVE_URL=$LU" >> "$GITHUB_ENV"; echo "SUPABASE_LIVE_KEY=$LK" >> "$GITHUB_ENV"; echo "Supabase live: on"; else echo "Supabase live: not set - GitHub only"; fi
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Session loop (quotes + tape every 15 min, committed each pass)
+        env:
+          INTRADAY_FORCE: ${{ github.event.inputs.force_tape == 'true' && '1' || '' }}
+          LOOP_MAX_ITERS: ${{ github.event.inputs.single == 'true' && '1' || '1000' }}
+          LOOP_OFFSET_SEC: '420'       # TRAPP2 0 · TRAPP2-1 180 · TRAPP2-2 300 · TRAPP2-4 420 · TRAPP2-3 600
+          GH_TOKEN: ${{ github.token }}          # z161: for chain_next (gh workflow run)
+          LOOP_START_UTC: '0800'      # z131: 04:00 EDT / 03:00 EST - the bars step skips anything outside 04:00-20:15 ET
+          LOOP_STOP_UTC: '2400'       # z131: through 20:00 EDT (19:00 EST)
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash pipeline/intraday_loop.sh
