@@ -1,0 +1,85 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/leadership-historyN-Z.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+# ============================================================
+name: Leadership History Refresh N-Z (Weekly)
+
+# Runs CEO/leadership career history fetch (Wikidata) for tickers starting
+# with letters N through Z, weekly on Monday 06:00 UTC.
+#
+# Scheduled 2 hours after the A-M workflow (which kicks off at 04:00 UTC).
+# The A-M run should finish well within 60 minutes, so by the time N-Z
+# starts there's no contention on the leadership/_manifest.json file. If
+# A-M is still running at 06:00 UTC, the commit step's "ours-wins" merge
+# handles any conflict gracefully — neither job's data gets lost.
+#
+# A-M + N-Z together replace the old monolithic leadership-history.yml.
+
+on:
+  schedule:
+  # z150: off GitHub's busy top / half of the hour, and 10 min after TRAPP2-2's same job (spreads the Yahoo load)
+    - cron: '23 11 * * MON'  # Mondays 11:23 UTC (after TRAPP2-3's 04:23-06:23)
+  workflow_dispatch:
+
+concurrency:
+  group: trapp2-leadership-nz
+  cancel-in-progress: false
+
+jobs:
+  refresh-leadership-nz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: pip install -r requirements.txt
+
+      - name: Fetch CEO/leadership career history N-Z (Wikidata)
+        run: |
+          echo "=== company files in scope (N-Z) ==="
+          ls data/company/ | grep -v '^_' | awk 'toupper(substr($0,1,1)) >= "N" && toupper(substr($0,1,1)) <= "Z"' | wc -l
+          echo "tickers"
+          echo "=== running fetch_ceo_tracker.py --start N --end Z ==="
+          python pipeline/fetch_ceo_tracker.py --start N --end Z || echo "CEO tracker N-Z had errors but continuing"
+          echo "=== leadership files after run ==="
+          ls -la data/leadership/by_ticker/ 2>/dev/null | wc -l || echo "no by_ticker dir"
+          ls -la data/leadership/by_person/ 2>/dev/null | wc -l || echo "no by_person dir"
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/leadership/
+          echo "=== git status before commit ==="
+          git status --short
+          if git diff --staged --quiet; then
+            echo "No leadership N-Z changes to commit"
+          else
+            git commit -m "Leadership history refresh N-Z $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            for i in 1 2 3 4 5; do
+              if git push; then
+                echo "Push succeeded on attempt $i"
+                break
+              fi
+              echo "Push attempt $i failed, rebasing and retrying"
+              git fetch origin
+
+              git merge -X ours origin/main 2>/dev/null || git merge -X ours origin/master 2>/dev/null || true
+
+              if [ -f .git/MERGE_HEAD ] || [ -d .git/rebase-merge ]; then git checkout --ours -- data/leadership/ 2>/dev/null || true; git add -A data/leadership/ 2>/dev/null || true; git commit --no-edit 2>/dev/null || true; fi
+              sleep 5
+            done
+          fi
