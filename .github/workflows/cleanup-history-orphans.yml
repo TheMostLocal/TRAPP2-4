@@ -1,0 +1,65 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/cleanup-history-orphans.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+# ============================================================
+name: Cleanup History Orphans
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List orphans without deleting (true) or delete them (false)'
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: history-cleanup
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prune orphan history files
+        env:
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: python pipeline/cleanup_history_orphans.py
+
+      - name: Commit & push (history scope only)
+        if: ${{ github.event.inputs.dry_run == 'false' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A data/history/ data/history_manifest.json
+          if git diff --staged --quiet; then
+            echo "No orphans to remove"
+            exit 0
+          fi
+          git commit -m "Cleanup history orphans $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+          for i in 1 2 3 4 5; do
+            if git push; then echo "Pushed on attempt $i"; break; fi
+            git fetch origin
+            git merge -X ours origin/${{ github.ref_name }} 2>/dev/null || true
+            if [ -f .git/MERGE_HEAD ]; then
+              git checkout --ours -- data/history/ data/history_manifest.json 2>/dev/null || true
+              git add -A data/history/ data/history_manifest.json 2>/dev/null || true
+              git commit --no-edit 2>/dev/null || true
+            fi
+            sleep 4
+          done
