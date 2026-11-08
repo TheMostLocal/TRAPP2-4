@@ -1,0 +1,103 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/history-20y.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+#  First run: ~1,600 tickers x 20 years (the job allows 350 minutes; later runs only append the new day).
+# ============================================================
+name: Refresh 20-Year History (Single Pass)
+
+on:
+  schedule:
+  # z150: off GitHub's busy top / half of the hour, and 10 min after TRAPP2-2's same job (spreads the Yahoo load)
+    - cron: '57 7 * * *'       # 07:57 UTC daily - after TRAPP2-3's (07:27)
+  workflow_dispatch:
+    inputs:
+      years:
+        description: 'Years of history to fetch'
+        required: false
+        default: '20'
+      force:
+        description: 'Refetch even fresh tickers (full backfill)'
+        type: boolean
+        required: false
+        default: false
+      prune:
+        description: 'Delete orphan history files no longer in tickers.txt'
+        type: boolean
+        required: false
+        default: true
+
+permissions:
+  contents: write
+
+# Never run two history passes at once, and don't cancel a long backfill.
+concurrency:
+  group: history-20y
+  cancel-in-progress: false
+
+jobs:
+  fetch-history:
+    runs-on: ubuntu-latest
+    # A full 20-year backfill of ~340 tickers fits comfortably; the ceiling is
+    # generous so the first big run can't be killed. Daily incremental runs take
+    # only a few minutes because fresh tickers are skipped.
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install requirements
+        run: pip install yfinance
+
+      - name: Fetch ALL history in one pass
+        run: |
+          YEARS="${{ github.event.inputs.years || '20' }}"
+          FORCE=""
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then FORCE="--force"; fi
+          PRUNE=""
+          # default prune ON; only disable if the user explicitly set prune=false
+          if [ "${{ github.event.inputs.prune }}" = "false" ]; then PRUNE="--no-prune"; fi
+          # --of 1 = single pass over the WHOLE universe (no batch race).
+          # --max-age-days 1 = skip tickers already ending yesterday (fast daily
+          # top-up after the first backfill). force=true ignores freshness.
+          python pipeline/fetch_history.py --of 1 --years "$YEARS" --max-age-days 1 $PRUNE $FORCE
+
+      - name: Commit & push (history scope only, retry)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Stage history files + the manifest INCLUDING deletions (orphan prune).
+          # Scoped to these paths ONLY so this job can never touch master/
+          # leadership/signals and can't revert another workflow.
+          git add -A data/history/ data/history_manifest.json
+          if git diff --staged --quiet; then
+            echo "No history changes to commit"
+            exit 0
+          fi
+          git commit -m "20y history (single pass) $(date -u +%Y-%m-%dT%H:%M:%SZ) [skip ci]"
+          # Single job, but another workflow (nightly/quotes) may have pushed
+          # meanwhile. Retry with a history-scoped OURS resolution so our freshly
+          # fetched bars + prune win for history files, and nothing else is touched.
+          for i in 1 2 3 4 5 6; do
+            if git push; then
+              echo "Pushed on attempt $i"
+              break
+            fi
+            echo "Push attempt $i failed — merging remote (history scope OURS)"
+            git fetch origin
+            git merge -X ours origin/${{ github.ref_name }} 2>/dev/null || true
+            if [ -f .git/MERGE_HEAD ]; then
+              git checkout --ours -- data/history/ data/history_manifest.json 2>/dev/null || true
+              git add -A data/history/ data/history_manifest.json 2>/dev/null || true
+              git commit --no-edit 2>/dev/null || true
+            fi
+            sleep 5
+          done
