@@ -1,0 +1,77 @@
+# ============================================================
+#  >>> DESTINATION: TheMostLocal/TRAPP2-4
+#  >>> FILE PATH:   .github/workflows/financials-refresh.yml
+#  TRAPP2-4 (z178): the NYSE equities that weren't in the app - ~1,600 tickers. Same pipeline as TRAPP2-3,
+#  scheduled a few minutes after it (Yahoo / Wikidata / FRED aren't hit by two books at once) and given
+#  the time a book five times larger needs.
+# ============================================================
+name: Refresh Financial Statements
+
+# Multi-year income / balance / cash-flow statements only change at earnings, so
+# this runs weekly (cheap) and can also be triggered by hand right after an
+# earnings release. Output is committed to data/financials/<TICKER>.json and read
+# by the app's company tab — no FMP quota involved.
+
+on:
+  schedule:
+  # z150: off GitHub's busy top / half of the hour, and 10 min after TRAPP2-2's same job (spreads the Yahoo load)
+    - cron: '17 9 * * 1'  # Mondays 09:17 UTC (after this book's 20-year history top-up)
+  workflow_dispatch:
+    inputs:
+      tickers:
+        description: 'Space-separated tickers (blank = all in data/tickers.txt)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: financials-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh-financials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install yfinance
+
+      - name: Fetch financial statements
+        run: |
+          if [ -n "${{ github.event.inputs.tickers }}" ]; then
+            python pipeline/fetch_financials.py ${{ github.event.inputs.tickers }}
+          else
+            python pipeline/fetch_financials.py
+          fi
+
+      - name: Commit and push (safe)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/financials/ || true
+          if git diff --cached --quiet; then
+            echo "No financial statement changes."
+            exit 0
+          fi
+          git commit -m "Refresh financial statements [skip ci]"
+          # Safe push: rebase on any concurrent change, keep ours on conflict, retry.
+          for i in 1 2 3 4 5; do
+            git fetch origin main || true
+            git merge -X ours origin/main --no-edit || true
+            if git push origin HEAD:main; then
+              echo "Pushed."
+              break
+            fi
+            echo "Push attempt $i failed; retrying…"
+            sleep 3
+          done
