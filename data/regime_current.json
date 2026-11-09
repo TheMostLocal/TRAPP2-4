@@ -97,59 +97,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-09T23:07:03+00:00",
-  "inputs_complete": false,
-  "inputs_missing": {
-    "macro": [
-      "INDPRO",
-      "T10Y2Y",
-      "BAMLH0A0HYM2",
-      "VIXCLS",
-      "DGS10",
-      "CPIAUCSL"
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ]
-  ],
-  "transition_observation_count": 0,
-  "transition_warning": "Only 0 transitions observed \u2014 need \u226560 for high confidence",
-  "transitions_computed_at": "2026-11-09T22:59:27+00:00"
+  "computed_at": "2026-11-09T23:22:03+00:00",
+  "inputs_complete": true
 }
