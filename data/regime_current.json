@@ -1,0 +1,111 @@
+{
+  "date": "2026-11-09",
+  "regime": "neutral",
+  "confidence": 0.905,
+  "scores": {
+    "macro": 0.385,
+    "liquidity": -1.0,
+    "volatility": -0.488,
+    "valuation": null,
+    "trend": 0.517,
+    "breadth": 0.273,
+    "commodity": 0.013,
+    "crypto": -0.449
+  },
+  "signal_confidences": {
+    "macro": 1.0,
+    "liquidity": 0.333,
+    "volatility": 1.0,
+    "valuation": 0.0,
+    "trend": 1.0,
+    "breadth": 1.0,
+    "commodity": 1.0,
+    "crypto": 1.0
+  },
+  "current_probabilities": {
+    "expansion": 0.0374,
+    "risk_on_melt_up": 0.0015,
+    "inflation_shock": 0.2291,
+    "recession_fear": 0.0416,
+    "risk_off": 0.2705,
+    "neutral": 0.4199
+  },
+  "drivers": [
+    {
+      "signal": "trend",
+      "score": 0.517,
+      "confidence": 1.0,
+      "weight": 0.517,
+      "direction": "bullish"
+    },
+    {
+      "signal": "volatility",
+      "score": -0.488,
+      "confidence": 1.0,
+      "weight": 0.488,
+      "direction": "bearish"
+    },
+    {
+      "signal": "crypto",
+      "score": -0.449,
+      "confidence": 1.0,
+      "weight": 0.449,
+      "direction": "bearish"
+    }
+  ],
+  "signal_notes": {
+    "macro": {
+      "avg_1m_sector_return": 0.0192,
+      "n_sectors": 11
+    },
+    "liquidity": {
+      "hyg_minus_lqd_1m": -0.0232
+    },
+    "volatility": {
+      "vix_level": 25.64,
+      "vix9d_over_vix": 1.0601
+    },
+    "valuation": {
+      "reason": "no SPY P/E in master.csv"
+    },
+    "trend": {
+      "spy_price": 735.29,
+      "sma50": 765.68,
+      "sma200": 730.38,
+      "pct_above_200dma": 0.0067
+    },
+    "breadth": {
+      "pct_sectors_above_50dma": 0.636,
+      "n_above": 7,
+      "n_total": 11
+    },
+    "commodity": {
+      "copper_60d_return": -0.0575,
+      "oil_60d_return": -0.0071,
+      "gold_oil_ratio": 44.863,
+      "gold_oil_zscore": -0.947,
+      "n_components": 3
+    },
+    "crypto": {
+      "btc_30d_return": -0.0965,
+      "btc_pct_from_50dma": -0.0875,
+      "eth_30d_return": -0.1467,
+      "n_components": 3
+    }
+  },
+  "computed_at": "2026-11-09T18:41:35+00:00",
+  "inputs_complete": false,
+  "inputs_missing": {
+    "macro": [
+      "INDPRO",
+      "T10Y2Y",
+      "BAMLH0A0HYM2",
+      "VIXCLS",
+      "DGS10",
+      "CPIAUCSL"
+    ],
+    "null_scores": [
+      "valuation"
+    ]
+  }
+}
