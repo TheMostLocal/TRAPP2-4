@@ -1,10 +1,10 @@
 {
   "date": "2026-11-09",
   "regime": "neutral",
-  "confidence": 0.905,
+  "confidence": 1.0,
   "scores": {
-    "macro": 0.385,
-    "liquidity": -1.0,
+    "macro": 0.41,
+    "liquidity": -0.422,
     "volatility": -0.488,
     "valuation": null,
     "trend": 0.517,
@@ -14,7 +14,7 @@
   },
   "signal_confidences": {
     "macro": 1.0,
-    "liquidity": 0.333,
+    "liquidity": 1.0,
     "volatility": 1.0,
     "valuation": 0.0,
     "trend": 1.0,
@@ -23,12 +23,12 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.0374,
-    "risk_on_melt_up": 0.0015,
-    "inflation_shock": 0.2291,
-    "recession_fear": 0.0416,
-    "risk_off": 0.2705,
-    "neutral": 0.4199
+    "expansion": 0.1015,
+    "risk_on_melt_up": 0.005,
+    "inflation_shock": 0.1457,
+    "recession_fear": 0.0219,
+    "risk_off": 0.1747,
+    "neutral": 0.5512
   },
   "drivers": [
     {
@@ -56,9 +56,13 @@
   "signal_notes": {
     "macro": {
       "avg_1m_sector_return": 0.0192,
-      "n_sectors": 11
+      "n_sectors": 11,
+      "indpro_yoy": 0.0225
     },
     "liquidity": {
+      "t10y2y": 0.32,
+      "hy_spread": 3.42,
+      "hy_spread_z": 1.04,
       "hyg_minus_lqd_1m": -0.0232
     },
     "volatility": {
@@ -104,8 +108,48 @@
       "DGS10",
       "CPIAUCSL"
     ],
-    "null_scores": [
-      "valuation"
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
     ]
-  }
+  ],
+  "transition_observation_count": 0,
+  "transition_warning": "Only 0 transitions observed \u2014 need \u226560 for high confidence",
+  "transitions_computed_at": "2026-11-09T22:59:27+00:00"
 }
