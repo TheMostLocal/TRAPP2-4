@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # intraday_loop.sh - ONE Actions job writes the whole session's 15-minute tape (z115).
-# Shared, identical in TRAPP2 / TRAPP2-1 / TRAPP2-2 / TRAPP2-3.
+# Shared: TRAPP2-CORE's copy runs in every book (TRAPP2, TRAPP2-1, TRAPP2-2, TRAPP2-3, TRAPP2-4 - the workflow copies
+# it over the book's own before starting); TRAPP2-4 keeps an identical copy for when CORE can't be checked out.
 #
 # Why: GitHub's scheduler delays and drops most "every 15 minutes" crons (the
 # live tape had 4 points on 2026-10-15: 13:09, 17:36, 20:33, 23:19 UTC). So a
@@ -85,8 +86,16 @@ event_pass() {
   live_push
 }
 
+# z180: the full fetch is only a FALLBACK inside the 15-minute loop (fast quotes priced < 80 %, or no master.json yet -
+# a new book before its first Nightly). Capped so a big book can't stall the tape for hours: TRAPP2-4's fetch_data.py
+# (1,622 names, 150 minutes in its nightly) honours FETCH_BUDGET_MIN - names past the cap keep their previous row and
+# the Nightly fills the rest; the other books' fetch_data.py ignore it and behave as before.
+full_fetch() {
+  FETCH_BUDGET_MIN="${LOOP_FULL_FETCH_MIN:-12}" python pipeline/fetch_data.py
+}
+
 one_pass() {
-  python pipeline/fetch_quotes_fast.py || python pipeline/fetch_data.py || echo "::warning::quote fetch failed this pass"
+  python pipeline/fetch_quotes_fast.py || full_fetch || echo "::warning::quote fetch failed this pass"
   python pipeline/human_corrections.py master || true
   python pipeline/compute_signals.py || true
   python pipeline/classify_regime.py || true
