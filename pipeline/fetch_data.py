@@ -19,6 +19,22 @@ tickers need (z178):
     so a Yahoo hiccup doesn't make names vanish from the app.
   * LISTING SYMBOLS - tickers.txt may hold exchange-list symbols (ABR$D, BF.A): each is fetched under its Yahoo
     form (ABR-PD, BF-A); the row's "ticker" is the Yahoo form and "symbolListed" keeps what the list said.
+
+z181 - EVERY NAME GETS A ROW. The first two nights wrote 238 of 1,622 rows (A-B only): six workers calling Yahoo per
+ticker were throttled after ~320 names, a ticker without a price was dropped (no previous row yet), and the next night
+started at A again. Now:
+  * PRICES IN BULK - Alpaca (official consolidated data, the books' paper keys) prices every US symbol in a handful
+    of requests: last / previous close, the last session's open-high-low-volume, the 52-week high / low from real daily
+    highs and lows, 3-month average volume. No per-ticker Yahoo price call for those names.
+  * FALLBACKS, LABELLED - no Alpaca bar -> Yahoo per ticker (as before); still none -> the committed 20-year history file
+    (last close, its date; 52-week range from daily CLOSES - slightly narrower than the true high / low range);
+    still none -> yesterday's row; still none -> listed in data/unpriced.json (likely delisted or renamed).
+    Each row says where its price came from (priceSource) and for which session (date).
+  * YAHOO IS PACED - fundamentals (.info) at most INFO_CONCURRENCY at a time; a rate-limit answer pauses every
+    profile call (90 s, doubling) and after YAHOO_MAX_COOLDOWNS pauses the run keeps cached profiles and moves on -
+    a row never waits on, or disappears for, a profile.
+  * MISSING FIRST - names with no row yet, then the oldest profiles, are processed first, so a throttled night still
+    extends coverage instead of redoing A-B.
 """
 import csv
 import hashlib
@@ -28,7 +44,7 @@ import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yfinance as yf
@@ -45,6 +61,11 @@ PROFILE_CACHE = DATA / ".profile_cache.json"
 PROFILE_TTL_HOURS = 24                     # kept for reference - TRAPP2-4 uses profile_ttl_hours() below
 FETCH_WORKERS = int(os.environ.get("FETCH_WORKERS", "6"))
 FETCH_BUDGET_MIN = float(os.environ.get("FETCH_BUDGET_MIN", "150"))
+INFO_CONCURRENCY = max(1, int(os.environ.get("INFO_CONCURRENCY", "3")))      # z181: Yahoo profile calls at once
+YAHOO_COOLDOWN_SEC = float(os.environ.get("YAHOO_COOLDOWN_SEC", "90"))       # z181: first pause after a rate limit
+YAHOO_MAX_COOLDOWNS = int(os.environ.get("YAHOO_MAX_COOLDOWNS", "4"))        # z181: then cached profiles for the rest
+HISTORY_DIR = DATA / "history"
+UNPRICED_JSON = DATA / "unpriced.json"
 _CACHE_LOCK = threading.Lock()
 
 
@@ -428,40 +449,175 @@ def fmt_num(v):
     return f"{f:.6f}".rstrip("0").rstrip(".") if "." in str(v) else str(v)
 
 
-def fetch_quote(ticker, profile_cache):
-    """Pull current quote + fundamentals for one ticker. Returns row dict."""
-    t = yf.Ticker(ticker)
+# ---------------------------------------------------------------------------------------------------- z181
+def _rate_limited(e):
+    s = f"{type(e).__name__} {e}".lower()
+    return "too many requests" in s or "rate limit" in s or "ratelimit" in s or " 429" in s or "429 " in s
 
-    # Fast price path: yfinance .fast_info is light. Falls back to history if missing.
-    fast = {}
+
+class YahooGate:
+    """z181: one pause for every worker when Yahoo says "too many requests" - 90 s, doubling, up to
+    YAHOO_MAX_COOLDOWNS pauses; after that the run stops asking for profiles (rows keep their cached one)."""
+
+    def __init__(self, base=None, max_pauses=None):
+        self.base = YAHOO_COOLDOWN_SEC if base is None else base
+        self.max = YAHOO_MAX_COOLDOWNS if max_pauses is None else max_pauses
+        self.lock = threading.Lock()
+        self.until, self.pauses, self.closed = 0.0, 0, False
+
+    def ok(self):
+        """Wait out a pause; False once the run has stopped asking Yahoo for profiles."""
+        while True:
+            with self.lock:
+                if self.closed:
+                    return False
+                left = self.until - time.time()
+            if left <= 0:
+                return True
+            time.sleep(min(left, 5.0))
+
+    def hit(self, ticker=""):
+        with self.lock:
+            if self.closed or time.time() < self.until:
+                return
+            if self.pauses >= self.max:
+                self.closed = True
+                log(f"  ⏸ Yahoo keeps rate-limiting ({ticker}) - no more Yahoo calls this run; rows keep their cached "
+                    f"profiles and take prices from Alpaca or the history file")
+                return
+            self.pauses += 1
+            pause = min(900.0, self.base * 2 ** (self.pauses - 1))
+            self.until = time.time() + pause
+            log(f"  ⏸ Yahoo rate limit ({ticker}) - pausing profile calls {pause:.0f} s ({self.pauses}/{self.max})")
+
+
+def bulk_prices(tickers, now=None):
+    """z181: every price field for every US symbol in a handful of Alpaca requests (SIP daily bars, the last ~13 months,
+    plus each name's latest IEX trade for today): {ticker: {price, prev_close, open, high, low, volume, high52, low52,
+    volumeavg, date, source}}. {} when Alpaca isn't configured or fails - the per-ticker paths then apply."""
     try:
-        fast = dict(t.fast_info) if t.fast_info else {}
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import alpaca_data as A
+    except Exception as e:
+        log(f"  Alpaca module unavailable ({type(e).__name__}) - Yahoo per ticker")
+        return {}
+    if not A.enabled():
+        log("  Alpaca keys not set (ALPACA_KEY_ID / ALPACA_SECRET_KEY) - Yahoo per ticker")
+        return {}
+    syms = [t for t in tickers if A.eligible(t)]
+    now = now or datetime.now(timezone.utc)
+    end = now - timedelta(minutes=16)                         # the free plan's SIP data ends 15 minutes back
+    try:
+        bars = A._bars(syms, "1Day", (now - timedelta(days=400)).strftime("%Y-%m-%dT00:00:00Z"), end.strftime("%Y-%m-%dT%H:%M:%SZ"), "sip")
+    except Exception as e:
+        log(f"  Alpaca bars failed ({type(e).__name__}: {str(e)[:120]}) - Yahoo per ticker")
+        return {}
+    try:
+        snap = A._snapshots(syms, "iex")
     except Exception:
-        fast = {}
+        snap = {}
+    out = {}
+    for s, rows in bars.items():
+        rows = sorted(((str(b["t"])[:10], float(b["o"]), float(b["h"]), float(b["l"]), float(b["c"]), float(b.get("v") or 0))
+                       for b in rows if b.get("c") is not None), key=lambda r: r[0])
+        if not rows:
+            continue
+        lt = (snap.get(s) or {}).get("latestTrade") or {}
+        if lt.get("p") and str(lt.get("t", ""))[:10] == rows[-1][0] and A._ts(lt["t"]) > end.timestamp():
+            d, o, h, l, c, v = rows[-1]
+            p = float(lt["p"])
+            rows[-1] = (d, o, max(h, p), min(l, p), p, v)      # today's bar brought up to the latest trade
+        last = rows[-1]
+        if (now.date() - datetime.strptime(last[0], "%Y-%m-%d").date()).days > 10:
+            continue                                           # no trade in ~a week of sessions: delisted / halted, not a price
+        cut = (datetime.strptime(last[0], "%Y-%m-%d") - timedelta(days=365)).strftime("%Y-%m-%d")
+        yr = [r for r in rows if r[0] > cut]                   # 52 weeks back from the last session
+        q3 = [r[5] for r in rows[-63:] if r[5]]
+        out[s] = {"price": last[4], "prev_close": rows[-2][4] if len(rows) > 1 else None, "open": last[1], "high": last[2],
+                  "low": last[3], "volume": last[5], "high52": max(r[2] for r in yr), "low52": min(r[3] for r in yr),
+                  "volumeavg": (sum(q3) / len(q3)) if q3 else None, "date": last[0], "source": "alpaca"}
+    return out
 
-    price = fast.get("last_price") or fast.get("regular_market_price")
-    prev_close = fast.get("previous_close") or fast.get("regular_market_previous_close")
-    open_p = fast.get("open")
-    day_high = fast.get("day_high")
-    day_low = fast.get("day_low")
-    high52 = fast.get("year_high")
-    low52 = fast.get("year_low")
-    vol = fast.get("last_volume") or fast.get("regular_market_volume")
 
-    # Backstop: pull last 2 bars via history if fast_info lacked anything
-    if price is None or prev_close is None:
+def history_price(ticker):
+    """z181: the last resort for a price - the committed 20-year history file (daily closes + volume). The 52-week range
+    comes from CLOSES here (no intraday highs / lows in the file), so it is slightly narrower than the true range."""
+    try:
+        rows = json.loads((HISTORY_DIR / f"{ticker}.json").read_text())
+    except Exception:
+        return None
+    rows = [r for r in (rows if isinstance(rows, list) else []) if isinstance(r, dict) and r.get("close") and r.get("date")]
+    if not rows:
+        return None
+    last = rows[-1]
+    try:
+        age = (datetime.now(timezone.utc).date() - datetime.strptime(str(last["date"])[:10], "%Y-%m-%d").date()).days
+    except ValueError:
+        return None
+    if age > 10:                                           # older than ~a week of sessions: not a current price
+        return None
+    cut = (datetime.strptime(str(last["date"])[:10], "%Y-%m-%d") - timedelta(days=365)).strftime("%Y-%m-%d")
+    yr = [float(r["close"]) for r in rows if str(r["date"])[:10] > cut]
+    vols = [float(r.get("volume") or 0) for r in rows[-63:] if r.get("volume")]
+    return {"price": float(last["close"]), "prev_close": float(rows[-2]["close"]) if len(rows) > 1 else None, "open": None,
+            "high": None, "low": None, "volume": float(last.get("volume") or 0) or None, "high52": max(yr), "low52": min(yr),
+            "volumeavg": (sum(vols) / len(vols)) if vols else None, "date": str(last["date"])[:10], "source": "history"}
+
+
+def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None):
+    """Pull current quote + fundamentals for one ticker. Returns row dict.
+    z181: the price from the Alpaca bulk pass when there is one (no Yahoo price call), else Yahoo, else the history
+    file; the profile through the Yahoo gate, never blocking or dropping the row."""
+    t = yf.Ticker(ticker)
+    b = (bulk or {}).get(ticker)
+    fast = {}
+    price = prev_close = open_p = day_high = day_low = high52 = low52 = vol = vol_avg = None
+    price_date, source = None, None
+    if b:
+        price, prev_close, open_p, day_high, day_low = b["price"], b["prev_close"], b["open"], b["high"], b["low"]
+        high52, low52, vol, vol_avg, price_date, source = b["high52"], b["low52"], b["volume"], b["volumeavg"], b["date"], "alpaca"
+    elif gate is None or gate.ok():
+        # Fast price path: yfinance .fast_info is light. Falls back to history if missing.
         try:
-            hist = t.history(period="5d", interval="1d", auto_adjust=False)
-            if len(hist) >= 1:
-                price = price or float(hist["Close"].iloc[-1])
-                if len(hist) >= 2:
-                    prev_close = prev_close or float(hist["Close"].iloc[-2])
-                open_p = open_p or float(hist["Open"].iloc[-1])
-                day_high = day_high or float(hist["High"].iloc[-1])
-                day_low = day_low or float(hist["Low"].iloc[-1])
-                vol = vol or float(hist["Volume"].iloc[-1])
+            fast = dict(t.fast_info) if t.fast_info else {}
         except Exception as e:
-            log(f"  ✗ {ticker} history backstop failed: {e}")
+            if gate is not None and _rate_limited(e):
+                gate.hit(ticker)
+            fast = {}
+
+        price = fast.get("last_price") or fast.get("regular_market_price")
+        prev_close = fast.get("previous_close") or fast.get("regular_market_previous_close")
+        open_p = fast.get("open")
+        day_high = fast.get("day_high")
+        day_low = fast.get("day_low")
+        high52 = fast.get("year_high")
+        low52 = fast.get("year_low")
+        vol = fast.get("last_volume") or fast.get("regular_market_volume")
+
+        # Backstop: pull last 2 bars via history if fast_info lacked anything
+        if price is None or prev_close is None:
+            try:
+                hist = t.history(period="5d", interval="1d", auto_adjust=False)
+                if len(hist) >= 1:
+                    price = price or float(hist["Close"].iloc[-1])
+                    if len(hist) >= 2:
+                        prev_close = prev_close or float(hist["Close"].iloc[-2])
+                    open_p = open_p or float(hist["Open"].iloc[-1])
+                    day_high = day_high or float(hist["High"].iloc[-1])
+                    day_low = day_low or float(hist["Low"].iloc[-1])
+                    vol = vol or float(hist["Volume"].iloc[-1])
+            except Exception as e:
+                if gate is not None and _rate_limited(e):
+                    gate.hit(ticker)
+                else:
+                    log(f"  ✗ {ticker} history backstop failed: {e}")
+        if price is not None:
+            source = "yahoo"
+    if price is None and not b:
+        h = history_price(ticker)                              # z181: the committed history file, labelled
+        if h:
+            price, prev_close, vol, vol_avg = h["price"], h["prev_close"], h["volume"], h["volumeavg"]
+            high52, low52, price_date, source = high52 or h["high52"], low52 or h["low52"], h["date"], "history"
 
     if price is None:
         return None
@@ -469,21 +625,32 @@ def fetch_quote(ticker, profile_cache):
     change = (price - prev_close) if prev_close else None
     changepct = (change / prev_close) if change is not None and prev_close else None
 
-    # Fundamentals — heavy call; cache it 24h
+    # Fundamentals — heavy call; staggered 48-96 h (z178), paced through the Yahoo gate (z181)
     cached = profile_cache.get(ticker, {})
     info = cached.get("info") if profile_is_fresh(cached, ticker) else None
     profile_fetched_at = cached.get("fetched_at", "")
     refreshed = False
     if info is None:
-        try:
-            info = _trim_info(t.info or {})
-            profile_fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            with _CACHE_LOCK:
-                profile_cache[ticker] = {"info": info, "fetched_at": profile_fetched_at}
-            refreshed = True
-        except Exception as e:
-            log(f"  ⚠ {ticker} .info failed: {e}")
-            info = cached.get("info") or {}
+        if gate is None or gate.ok():
+            try:
+                if info_sem is not None:
+                    with info_sem:
+                        raw_info = t.info or {}
+                else:
+                    raw_info = t.info or {}
+                info = _trim_info(raw_info)
+                profile_fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                with _CACHE_LOCK:
+                    profile_cache[ticker] = {"info": info, "fetched_at": profile_fetched_at}
+                refreshed = True
+            except Exception as e:
+                if gate is not None and _rate_limited(e):
+                    gate.hit(ticker)
+                else:
+                    log(f"  ⚠ {ticker} .info failed: {e}")
+                info = cached.get("info") or {}
+        else:
+            info = cached.get("info") or {}                   # the run stopped asking: keep the last profile
 
     row = {
         "ticker": ticker,
@@ -491,7 +658,7 @@ def fetch_quote(ticker, profile_cache):
         "price": fmt_num(price),
         "marketcap": fmt_num(safe(info, "marketCap")),
         "volume": fmt_num(vol),
-        "volumeavg": fmt_num(safe(info, "averageVolume")),
+        "volumeavg": fmt_num(safe(info, "averageVolume") or vol_avg),
         "priceopen": fmt_num(open_p),
         "low": fmt_num(day_low),
         "high": fmt_num(day_high),
@@ -499,7 +666,8 @@ def fetch_quote(ticker, profile_cache):
         "change": fmt_num(change),
         "changepct": fmt_num(changepct * 100 if changepct is not None else ""),
         "closeyest": fmt_num(prev_close),
-        "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "date": price_date or datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "priceSource": source or "",                            # z181: alpaca | yahoo | history (labelled, never silent)
         "high52": fmt_num(high52),
         "low52": fmt_num(low52),
         "beta": fmt_num(safe(info, "beta")),
@@ -583,6 +751,8 @@ def fetch_quote(ticker, profile_cache):
                 if _v and not row.get(_k):
                     row[_k] = _v
         _need_bs = refreshed and ((not row.get("totalEquity")) or (not row.get("totalAssets")) or (not row.get("totalDebt")))
+        if _need_bs and gate is not None and not gate.ok():
+            _need_bs = False                                    # z181: no extra statement calls while Yahoo is pacing us
         if _need_bs:
             _bs = t.balance_sheet
             if _bs is not None and not _bs.empty:
@@ -639,70 +809,107 @@ def _previous_rows():
         return {}
 
 
+def _unpriced_report(missing, tickers):
+    """z181: names no source could price (no previous row either) - with how many runs and since when. A name that stays
+    here is most likely delisted, merged or renamed since the exchange list was made: the universe clean-up's input."""
+    try:
+        prev = json.loads(UNPRICED_JSON.read_text()).get("tickers") or {}
+    except Exception:
+        prev = {}
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    cur = {t: {"since": (prev.get(t) or {}).get("since") or today, "runs": int((prev.get(t) or {}).get("runs") or 0) + 1,
+               "listed": LISTED.get(t, t)} for t in missing}
+    UNPRICED_JSON.write_text(json.dumps({"asOf": datetime.now(timezone.utc).isoformat(timespec="seconds"), "of": len(tickers),
+                                         "count": len(cur), "tickers": cur}, indent=1))
+    return cur
+
+
 def main():
     tickers = load_tickers()
     if not tickers:
         log("No tickers to fetch. Exiting.")
         return 1
     t0 = time.time()
-    log(f"Fetching {len(tickers)} tickers via yfinance · {FETCH_WORKERS} workers · budget {FETCH_BUDGET_MIN:.0f} min…")
+    log(f"Fetching {len(tickers)} tickers · {FETCH_WORKERS} workers · {INFO_CONCURRENCY} profile calls at once · budget {FETCH_BUDGET_MIN:.0f} min…")
 
     profile_cache = load_profile_cache()
     previous = _previous_rows()
+    bulk = bulk_prices(tickers)                                     # z181: prices for every US name, a few requests
+    if bulk:
+        log(f"  Alpaca: {len(bulk)} of {len(tickers)} priced in bulk (SIP daily bars + latest IEX trade)")
+    # z181: names with no row yet first, then the oldest profiles - a throttled night still extends coverage
+    order = sorted(tickers, key=lambda t: (t in previous, str((profile_cache.get(t) or {}).get("fetched_at") or "")))
+    gate, info_sem = YahooGate(), threading.Semaphore(INFO_CONCURRENCY)
+    no_yahoo = YahooGate(max_pauses=0)
+    no_yahoo.closed = True                                          # z181: past the budget - Alpaca / history only
     rows_by = {}
     failed, skipped = [], []
     stop = threading.Event()
 
     def one(tic):
-        if stop.is_set():
-            return tic, None, "budget"
+        late = stop.is_set()
+        if late:
+            skipped.append(tic)
         try:
-            return tic, fetch_quote(tic, profile_cache), None
+            return tic, fetch_quote(tic, profile_cache, bulk, no_yahoo if late else gate, info_sem), None
         except Exception as e:
+            if _rate_limited(e):
+                gate.hit(tic)
             return tic, None, str(e)[:120]
 
     with ThreadPoolExecutor(max_workers=FETCH_WORKERS) as ex:
-        futs = [ex.submit(one, t) for t in tickers]
+        futs = [ex.submit(one, t) for t in order]
         for n, fu in enumerate(as_completed(futs), 1):
             tic, row, err = fu.result()
             if row:
                 rows_by[tic] = row
-            elif err == "budget":
-                skipped.append(tic)
             else:
                 failed.append(tic)
                 if len(failed) <= 40:
-                    log(f"  ✗ {tic}: {err or 'no price data'}")
+                    log(f"  ✗ {tic}: {err or 'no price from Alpaca, Yahoo or the history file'}")
             if n % 100 == 0:
                 log(f"  … {n}/{len(tickers)} ({len(rows_by)} OK) · {(time.time() - t0) / 60:.1f} min")
                 with _CACHE_LOCK:
                     save_profile_cache(profile_cache)
             if not stop.is_set() and (time.time() - t0) / 60 > FETCH_BUDGET_MIN:
-                log(f"  ⏱ budget of {FETCH_BUDGET_MIN:.0f} min reached - the rest keep their previous rows")
+                log(f"  ⏱ budget of {FETCH_BUDGET_MIN:g} min reached - the rest are priced from Alpaca / the history file "
+                    f"with their cached profiles (no more Yahoo calls)")
                 stop.set()
 
     with _CACHE_LOCK:
         save_profile_cache(profile_cache)
 
     # every ticker keeps a row: fresh, else yesterday's (a Yahoo hiccup must not drop names from the app)
-    rows, carried = [], 0
+    rows, carried, missing = [], 0, []
     for t in tickers:
         if t in rows_by:
             rows.append(rows_by[t])
         elif t in previous:
             rows.append(previous[t])
             carried += 1
+        else:
+            missing.append(t)
 
     DATA.mkdir(parents=True, exist_ok=True)
     with MASTER_CSV.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=COLUMNS + ["symbolListed"], extrasaction="ignore")
+        w = csv.DictWriter(f, fieldnames=COLUMNS + ["symbolListed", "priceSource"], extrasaction="ignore")
         w.writeheader()
         for r in rows:
             w.writerow(r)
     MASTER_JSON.write_text(json.dumps(rows, separators=(",", ":")))
+    unp = _unpriced_report(missing, tickers)
 
-    log(f"✓ {len(rows_by)}/{len(tickers)} fetched · {carried} kept their previous row · {len(failed)} failed · "
-        f"{len(skipped)} past the budget · {len(rows)} rows written · {(time.time() - t0) / 60:.1f} min")
+    src = {}
+    for r in rows_by.values():
+        src[r.get("priceSource") or "?"] = src.get(r.get("priceSource") or "?", 0) + 1
+    fresh_profiles = sum(1 for r in rows_by.values() if str(r.get("profile_fetched_at") or "")[:10] == datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    log(f"✓ {len(rows_by)}/{len(tickers)} fetched (prices: " + ", ".join(f"{k} {v}" for k, v in sorted(src.items())) + f") · "
+        f"{fresh_profiles} profiles refreshed{' · Yahoo paused ' + str(gate.pauses) + 'x' if gate.pauses else ''}{', then stopped asking' if gate.closed else ''} · "
+        f"{carried} kept their previous row · {len(failed)} failed · {len(skipped)} past the budget (no Yahoo) · {len(rows)} rows written · "
+        f"{(time.time() - t0) / 60:.1f} min")
+    if unp:
+        log(f"  {len(unp)} name(s) no source could price (data/unpriced.json - likely delisted / renamed): "
+            + ", ".join(sorted(unp)[:40]) + (" …" if len(unp) > 40 else ""))
     return 0
 
 
