@@ -97,6 +97,94 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-11T22:52:04+00:00",
-  "inputs_complete": true
+  "computed_at": "2026-11-11T23:01:21+00:00",
+  "inputs_complete": true,
+  "transitions": {
+    "1_step": {
+      "expansion": 0.125,
+      "risk_on_melt_up": 0.125,
+      "inflation_shock": 0.125,
+      "recession_fear": 0.125,
+      "risk_off": 0.125,
+      "neutral": 0.375
+    },
+    "5_step": {
+      "expansion": 0.1578,
+      "risk_on_melt_up": 0.1578,
+      "inflation_shock": 0.1578,
+      "recession_fear": 0.1578,
+      "risk_off": 0.1578,
+      "neutral": 0.2108
+    },
+    "20_step": {
+      "expansion": 0.1579,
+      "risk_on_melt_up": 0.1579,
+      "inflation_shock": 0.1579,
+      "recession_fear": 0.1579,
+      "risk_off": 0.1579,
+      "neutral": 0.2105
+    }
+  },
+  "stationary": {
+    "expansion": 0.1579,
+    "risk_on_melt_up": 0.1579,
+    "inflation_shock": 0.1579,
+    "recession_fear": 0.1579,
+    "risk_off": 0.1579,
+    "neutral": 0.2105
+  },
+  "expected_persistence_days": 1.6,
+  "transition_matrix": [
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.125,
+      0.125,
+      0.125,
+      0.125,
+      0.125,
+      0.375
+    ]
+  ],
+  "transition_observation_count": 2,
+  "transition_warning": "Only 2 transitions observed \u2014 need \u226560 for high confidence",
+  "transitions_computed_at": "2026-11-11T23:01:21+00:00"
 }
