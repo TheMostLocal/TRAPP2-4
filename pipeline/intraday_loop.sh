@@ -2,6 +2,7 @@
 # intraday_loop.sh - ONE Actions job writes the whole session's 15-minute tape (z115).
 # Shared: TRAPP2-CORE's copy runs in every book (TRAPP2, TRAPP2-1, TRAPP2-2, TRAPP2-3, TRAPP2-4 - the workflow copies
 # it over the book's own before starting); TRAPP2-4 keeps an identical copy for when CORE can't be checked out.
+# z181: on a push conflict a master the Nightly rebuilt meanwhile wins over this pass's quote refresh (see commit_push).
 #
 # Why: GitHub's scheduler delays and drops most "every 15 minutes" crons (the
 # live tape had 4 points on 2026-10-15: 13:09, 17:36, 20:33, 23:19 UTC). So a
@@ -139,11 +140,27 @@ commit_push() {
     if git push -q origin "HEAD:$BRANCH"; then echo "pushed (attempt $k)"; return 0; fi
     echo "push rejected - reconciling (ours wins for OUR files)"
     git fetch -q origin "$BRANCH"
+    base=$(git merge-base HEAD "origin/$BRANCH" 2>/dev/null || true)
     git merge -X ours "origin/$BRANCH" --no-edit -q 2>/dev/null || true
     if [ -f .git/MERGE_HEAD ]; then
       for f in $OWN; do [ -e "$f" ] && git checkout --ours -- "$f" 2>/dev/null; done
       for f in $OWN; do [ -e "$f" ] && git add -A "$f"; done
       git commit -q --no-edit 2>/dev/null || true
+    fi
+    # z181: the NIGHTLY owns the row set; this loop only refreshes prices in it. If the remote's master changed while
+    # this pass ran (a Nightly landed - GitHub starts them hours late, inside the loop's window), keep THEIRS: the next
+    # pass re-applies the quotes within 15 minutes. "Ours wins" here put an older, smaller book back over a rebuild.
+    if [ -n "$base" ]; then
+      took=""
+      for f in data/master.json data/master.csv; do
+        if ! git diff --quiet "$base" "origin/$BRANCH" -- "$f" 2>/dev/null; then
+          git checkout "origin/$BRANCH" -- "$f" 2>/dev/null && git add -A "$f" && took="$took $f"
+        fi
+      done
+      if [ -n "$took" ]; then
+        git commit -q -m "keep the rebuilt$took from the remote [skip ci]" 2>/dev/null || true
+        echo "the remote rebuilt$took while this pass ran - kept theirs (quotes re-applied next pass)"
+      fi
     fi
     sleep $((k * 2))
   done
