@@ -49,10 +49,13 @@ jobs:
       - name: Install core requirements (must succeed)
         run: pip install requests pandas "yfinance>=0.2.50,<0.3"
 
-      - name: Fetch quotes + fundamentals (parallel; profiles every 48-96 h)
+      - name: Fetch quotes + fundamentals (prices in bulk from Alpaca; profiles every 48-96 h, paced)
         env:
           FETCH_WORKERS: '6'
           FETCH_BUDGET_MIN: '150'
+          INFO_CONCURRENCY: '3'                                # z181: Yahoo profile calls at once
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}          # z181: every price in a few requests (empty = Yahoo per ticker)
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
         run: python pipeline/fetch_data.py
 
       # HUMAN CORRECTIONS OUTRANK PULLED DATA. Applies active XTRAPP overrides to
@@ -86,7 +89,7 @@ jobs:
           # SCOPED to what this job writes (quotes, profile cache, history top-up).
           # The old blanket `git add -A data/` + `checkout --ours -- data/` could
           # overwrite sibling workflows' files on a push conflict.
-          OWN="data/master.csv data/master.json data/.profile_cache.json data/history/ data/history_manifest.json"
+          OWN="data/master.csv data/master.json data/.profile_cache.json data/history/ data/history_manifest.json data/unpriced.json"   # z181: + unpriced.json
           for p in $OWN; do git add -A "$p" 2>/dev/null || true; done
           if git diff --staged --quiet; then
             echo "No nightly changes to commit"
