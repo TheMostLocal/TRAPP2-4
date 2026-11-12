@@ -35,6 +35,14 @@ started at A again. Now:
     a row never waits on, or disappears for, a profile.
   * MISSING FIRST - names with no row yet, then the oldest profiles, are processed first, so a throttled night still
     extends coverage instead of redoing A-B.
+
+z183 - the first hand-run Nightly with z181 stopped after 1m41s: the bulk pass compared Alpaca's trade time (a datetime)
+with a number (TypeError). Fixed and tested against the REAL alpaca_data.py (only its network call faked). Also:
+  * the bulk pass can't fail the run - any error there and the night falls back to the per-ticker path;
+  * separate Yahoo gates for prices and profiles (Yahoo throttles profiles first; the ~85 names Alpaca doesn't carry -
+    indices, futures, FX, crypto - still get a price), and those names go first;
+  * NAMES ON NIGHT ONE - today's exchange symbol directories (Nasdaq Trader, public) name a row until its Yahoo profile
+    arrives, and mark an unpriced name that is OFF the lists as delisted / renamed (data/unpriced.json, the log).
 """
 import csv
 import hashlib
@@ -43,6 +51,7 @@ import os
 import sys
 import threading
 import time
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -66,6 +75,9 @@ YAHOO_COOLDOWN_SEC = float(os.environ.get("YAHOO_COOLDOWN_SEC", "90"))       # z
 YAHOO_MAX_COOLDOWNS = int(os.environ.get("YAHOO_MAX_COOLDOWNS", "4"))        # z181: then cached profiles for the rest
 HISTORY_DIR = DATA / "history"
 UNPRICED_JSON = DATA / "unpriced.json"
+LISTING_URLS = ("https://www.nasdaqtrader.com/dynamic/SymDir/otherlisted.txt",     # NYSE / NYSE American / Arca / Cboe
+                "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqlisted.txt")    # Nasdaq
+LISTING_NAMES = {}                  # z183: {Yahoo-form ticker: security name} from today's exchange symbol directories
 _CACHE_LOCK = threading.Lock()
 
 
@@ -504,6 +516,14 @@ def bulk_prices(tickers, now=None):
     if not A.enabled():
         log("  Alpaca keys not set (ALPACA_KEY_ID / ALPACA_SECRET_KEY) - Yahoo per ticker")
         return {}
+    try:
+        return _bulk_prices(A, tickers, now)
+    except Exception as e:                                     # z183: a bulk-path bug must never fail the Nightly
+        log(f"  Alpaca bulk pass failed ({type(e).__name__}: {str(e)[:160]}) - Yahoo per ticker")
+        return {}
+
+
+def _bulk_prices(A, tickers, now=None):
     syms = [t for t in tickers if A.eligible(t)]
     now = now or datetime.now(timezone.utc)
     end = now - timedelta(minutes=16)                         # the free plan's SIP data ends 15 minutes back
@@ -516,26 +536,72 @@ def bulk_prices(tickers, now=None):
         snap = A._snapshots(syms, "iex")
     except Exception:
         snap = {}
-    out = {}
+    out, bad = {}, 0
     for s, rows in bars.items():
-        rows = sorted(((str(b["t"])[:10], float(b["o"]), float(b["h"]), float(b["l"]), float(b["c"]), float(b.get("v") or 0))
-                       for b in rows if b.get("c") is not None), key=lambda r: r[0])
-        if not rows:
-            continue
-        lt = (snap.get(s) or {}).get("latestTrade") or {}
-        if lt.get("p") and str(lt.get("t", ""))[:10] == rows[-1][0] and A._ts(lt["t"]) > end.timestamp():
-            d, o, h, l, c, v = rows[-1]
-            p = float(lt["p"])
-            rows[-1] = (d, o, max(h, p), min(l, p), p, v)      # today's bar brought up to the latest trade
-        last = rows[-1]
-        if (now.date() - datetime.strptime(last[0], "%Y-%m-%d").date()).days > 10:
-            continue                                           # no trade in ~a week of sessions: delisted / halted, not a price
-        cut = (datetime.strptime(last[0], "%Y-%m-%d") - timedelta(days=365)).strftime("%Y-%m-%d")
-        yr = [r for r in rows if r[0] > cut]                   # 52 weeks back from the last session
-        q3 = [r[5] for r in rows[-63:] if r[5]]
-        out[s] = {"price": last[4], "prev_close": rows[-2][4] if len(rows) > 1 else None, "open": last[1], "high": last[2],
-                  "low": last[3], "volume": last[5], "high52": max(r[2] for r in yr), "low52": min(r[3] for r in yr),
-                  "volumeavg": (sum(q3) / len(q3)) if q3 else None, "date": last[0], "source": "alpaca"}
+        try:
+            rows = sorted(((str(b["t"])[:10], float(b["o"]), float(b["h"]), float(b["l"]), float(b["c"]), float(b.get("v") or 0))
+                           for b in rows if b.get("c") is not None), key=lambda r: r[0])
+            if not rows:
+                continue
+            lt = (snap.get(s) or {}).get("latestTrade") or {}
+            # z183: _ts() returns a datetime - compared with `end`, a datetime (z181 compared it with a float and the
+            # first hand-run Nightly stopped on the TypeError)
+            if lt.get("p") and str(lt.get("t", ""))[:10] == rows[-1][0] and A._ts(lt["t"]) > end:
+                d, o, h, l, c, v = rows[-1]
+                p = float(lt["p"])
+                rows[-1] = (d, o, max(h, p), min(l, p), p, v)  # today's bar brought up to the latest trade
+            last = rows[-1]
+            if (now.date() - datetime.strptime(last[0], "%Y-%m-%d").date()).days > 10:
+                continue                                       # no trade in ~a week of sessions: delisted / halted, not a price
+            cut = (datetime.strptime(last[0], "%Y-%m-%d") - timedelta(days=365)).strftime("%Y-%m-%d")
+            yr = [r for r in rows if r[0] > cut]               # 52 weeks back from the last session
+            q3 = [r[5] for r in rows[-63:] if r[5]]
+            out[s] = {"price": last[4], "prev_close": rows[-2][4] if len(rows) > 1 else None, "open": last[1], "high": last[2],
+                      "low": last[3], "volume": last[5], "high52": max(r[2] for r in yr), "low52": min(r[3] for r in yr),
+                      "volumeavg": (sum(q3) / len(q3)) if q3 else None, "date": last[0], "source": "alpaca"}
+        except Exception as e:                                 # one odd symbol stays on the per-ticker path
+            bad += 1
+            if bad <= 5:
+                log(f"  Alpaca bar for {s} unreadable ({type(e).__name__}: {str(e)[:80]}) - per ticker")
+    return out
+
+
+def _clean_security_name(n):
+    """'Ambev S.A. American Depositary Shares (Each representing 1 Common Share)' -> 'Ambev S.A.'"""
+    import re as _re
+    n = _re.sub(r"\s*\([^)]*\)\s*$", "", " ".join(str(n or "").split()))
+    tails = (" Common Stock", " Common Shares", " Ordinary Shares", " American Depositary Shares", " Depositary Shares")
+    changed = True
+    while changed:
+        changed = False
+        for tail in tails:
+            if n.endswith(tail):
+                n, changed = n[: -len(tail)].rstrip(" ,-"), True
+    return n
+
+
+def exchange_listing(urls=LISTING_URLS):
+    """z183: today's US symbol directories (Nasdaq Trader, public, updated nightly) -> {Yahoo-form ticker: name}.
+    Names a row whose Yahoo profile hasn't arrived yet, and tells a delisted name (off the lists) from a data hiccup.
+    {} on any failure - nothing depends on it."""
+    out = {}
+    for url in urls:
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Valuatio data pipeline)"})
+            with urllib.request.urlopen(req, timeout=30) as r:
+                lines = r.read().decode("utf-8", "replace").splitlines()
+            head = lines[0].split("|") if lines else []
+            si = head.index("ACT Symbol") if "ACT Symbol" in head else head.index("Symbol")
+            ni, ti = head.index("Security Name"), (head.index("Test Issue") if "Test Issue" in head else None)
+            for ln in lines[1:]:
+                p = ln.split("|")
+                if ln.startswith("File Creation Time") or len(p) <= max(si, ni) or (ti is not None and len(p) > ti and p[ti] == "Y"):
+                    continue
+                sym = norm_symbol(p[si])
+                if sym:
+                    out.setdefault(sym, _clean_security_name(p[ni]))
+        except Exception as e:
+            log(f"  exchange list {url.rsplit('/', 1)[-1]} unavailable ({type(e).__name__}: {str(e)[:80]})")
     return out
 
 
@@ -564,10 +630,13 @@ def history_price(ticker):
             "volumeavg": (sum(vols) / len(vols)) if vols else None, "date": str(last["date"])[:10], "source": "history"}
 
 
-def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None):
+def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None, price_gate=None):
     """Pull current quote + fundamentals for one ticker. Returns row dict.
     z181: the price from the Alpaca bulk pass when there is one (no Yahoo price call), else Yahoo, else the history
-    file; the profile through the Yahoo gate, never blocking or dropping the row."""
+    file; the profile through the Yahoo gate, never blocking or dropping the row. z183: prices and profiles have
+    separate gates - Yahoo throttles its profile endpoint long before its price endpoint, and a shut profile gate must
+    not leave the ~85 names Alpaca doesn't carry (indices, futures, FX, crypto) without a price."""
+    price_gate = gate if price_gate is None else price_gate
     t = yf.Ticker(ticker)
     b = (bulk or {}).get(ticker)
     fast = {}
@@ -576,13 +645,13 @@ def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None):
     if b:
         price, prev_close, open_p, day_high, day_low = b["price"], b["prev_close"], b["open"], b["high"], b["low"]
         high52, low52, vol, vol_avg, price_date, source = b["high52"], b["low52"], b["volume"], b["volumeavg"], b["date"], "alpaca"
-    elif gate is None or gate.ok():
+    elif price_gate is None or price_gate.ok():
         # Fast price path: yfinance .fast_info is light. Falls back to history if missing.
         try:
             fast = dict(t.fast_info) if t.fast_info else {}
         except Exception as e:
-            if gate is not None and _rate_limited(e):
-                gate.hit(ticker)
+            if price_gate is not None and _rate_limited(e):
+                price_gate.hit(ticker)
             fast = {}
 
         price = fast.get("last_price") or fast.get("regular_market_price")
@@ -607,8 +676,8 @@ def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None):
                     day_low = day_low or float(hist["Low"].iloc[-1])
                     vol = vol or float(hist["Volume"].iloc[-1])
             except Exception as e:
-                if gate is not None and _rate_limited(e):
-                    gate.hit(ticker)
+                if price_gate is not None and _rate_limited(e):
+                    price_gate.hit(ticker)
                 else:
                     log(f"  ✗ {ticker} history backstop failed: {e}")
         if price is not None:
@@ -798,6 +867,8 @@ def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None):
     if ticker in LISTED:
         row["symbolListed"] = LISTED[ticker]
 
+    if not row.get("name") and LISTING_NAMES.get(ticker):      # z183: the exchange list's name until the profile arrives
+        row["name"] = LISTING_NAMES[ticker]
     return row
 
 
@@ -818,7 +889,9 @@ def _unpriced_report(missing, tickers):
         prev = {}
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     cur = {t: {"since": (prev.get(t) or {}).get("since") or today, "runs": int((prev.get(t) or {}).get("runs") or 0) + 1,
-               "listed": LISTED.get(t, t)} for t in missing}
+               "listed": LISTED.get(t, t),
+               # z183: off today's exchange lists = delisted / renamed (None = the lists didn't load this run)
+               "onExchangeList": (t in LISTING_NAMES) if LISTING_NAMES else None} for t in missing}
     UNPRICED_JSON.write_text(json.dumps({"asOf": datetime.now(timezone.utc).isoformat(timespec="seconds"), "of": len(tickers),
                                          "count": len(cur), "tickers": cur}, indent=1))
     return cur
@@ -834,12 +907,21 @@ def main():
 
     profile_cache = load_profile_cache()
     previous = _previous_rows()
-    bulk = bulk_prices(tickers)                                     # z181: prices for every US name, a few requests
+    LISTING_NAMES.clear()
+    LISTING_NAMES.update(exchange_listing())                        # z183: names + a delisting signal, one request each
+    if LISTING_NAMES:
+        log(f"  exchange lists: {len(LISTING_NAMES)} symbols · {sum(1 for t in tickers if t in LISTING_NAMES)} of this book's {len(tickers)} listed today")
+    try:
+        bulk = bulk_prices(tickers)                                 # z181: prices for every US name, a few requests
+    except Exception as e:                                          # z183: belt and braces
+        log(f"  bulk prices unavailable ({type(e).__name__}: {str(e)[:160]})")
+        bulk = {}
     if bulk:
         log(f"  Alpaca: {len(bulk)} of {len(tickers)} priced in bulk (SIP daily bars + latest IEX trade)")
     # z181: names with no row yet first, then the oldest profiles - a throttled night still extends coverage
-    order = sorted(tickers, key=lambda t: (t in previous, str((profile_cache.get(t) or {}).get("fetched_at") or "")))
-    gate, info_sem = YahooGate(), threading.Semaphore(INFO_CONCURRENCY)
+    # z183: ... and before both, the names Alpaca didn't price (they need Yahoo for the price itself)
+    order = sorted(tickers, key=lambda t: (t in bulk, t in previous, str((profile_cache.get(t) or {}).get("fetched_at") or "")))
+    gate, price_gate, info_sem = YahooGate(), YahooGate(), threading.Semaphore(INFO_CONCURRENCY)
     no_yahoo = YahooGate(max_pauses=0)
     no_yahoo.closed = True                                          # z181: past the budget - Alpaca / history only
     rows_by = {}
@@ -851,10 +933,11 @@ def main():
         if late:
             skipped.append(tic)
         try:
-            return tic, fetch_quote(tic, profile_cache, bulk, no_yahoo if late else gate, info_sem), None
+            return tic, fetch_quote(tic, profile_cache, bulk, no_yahoo if late else gate, info_sem,
+                                    no_yahoo if late else price_gate), None
         except Exception as e:
             if _rate_limited(e):
-                gate.hit(tic)
+                price_gate.hit(tic)
             return tic, None, str(e)[:120]
 
     with ThreadPoolExecutor(max_workers=FETCH_WORKERS) as ex:
@@ -904,12 +987,16 @@ def main():
         src[r.get("priceSource") or "?"] = src.get(r.get("priceSource") or "?", 0) + 1
     fresh_profiles = sum(1 for r in rows_by.values() if str(r.get("profile_fetched_at") or "")[:10] == datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     log(f"✓ {len(rows_by)}/{len(tickers)} fetched (prices: " + ", ".join(f"{k} {v}" for k, v in sorted(src.items())) + f") · "
-        f"{fresh_profiles} profiles refreshed{' · Yahoo paused ' + str(gate.pauses) + 'x' if gate.pauses else ''}{', then stopped asking' if gate.closed else ''} · "
+        f"{fresh_profiles} profiles refreshed{' · Yahoo profiles paused ' + str(gate.pauses) + 'x' if gate.pauses else ''}{', then stopped asking' if gate.closed else ''}"
+        f"{' · Yahoo prices paused ' + str(price_gate.pauses) + 'x' if price_gate.pauses else ''}{', then stopped' if price_gate.closed else ''} · "
         f"{carried} kept their previous row · {len(failed)} failed · {len(skipped)} past the budget (no Yahoo) · {len(rows)} rows written · "
         f"{(time.time() - t0) / 60:.1f} min")
     if unp:
-        log(f"  {len(unp)} name(s) no source could price (data/unpriced.json - likely delisted / renamed): "
-            + ", ".join(sorted(unp)[:40]) + (" …" if len(unp) > 40 else ""))
+        off = sorted(t for t, v in unp.items() if v.get("onExchangeList") is False)
+        log(f"  {len(unp)} name(s) no source could price (data/unpriced.json): " + ", ".join(sorted(unp)[:40]) + (" …" if len(unp) > 40 else ""))
+        if off:
+            log(f"  {len(off)} of them are no longer on the exchange lists (delisted / renamed - remove from tickers.txt): "
+                + ", ".join(off[:60]) + (" …" if len(off) > 60 else ""))
     return 0
 
 
