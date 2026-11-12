@@ -1,359 +1,359 @@
 {
- "asOf": "2026-11-12T05:52:37+00:00",
+ "asOf": "2026-11-12T08:14:26+00:00",
  "of": 1705,
  "count": 59,
  "tickers": {
   "ACA": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "ACA",
    "onExchangeList": false
   },
   "ACVA": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "ACVA",
    "onExchangeList": false
   },
   "ATKR": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "ATKR",
    "onExchangeList": false
   },
   "AVNS": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "AVNS",
    "onExchangeList": false
   },
   "AXIA": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "AXIA",
    "onExchangeList": false
   },
   "BLD": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "BLD",
    "onExchangeList": false
   },
   "BZH": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "BZH",
    "onExchangeList": false
   },
   "CBZ": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "CBZ",
    "onExchangeList": false
   },
   "CCO": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "CCO",
    "onExchangeList": false
   },
   "CSAN": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "CSAN",
    "onExchangeList": false
   },
   "CWAN": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "CWAN",
    "onExchangeList": false
   },
   "DBRG": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "DBRG",
    "onExchangeList": false
   },
   "EEX": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "EEX",
    "onExchangeList": false
   },
   "EHAB": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "EHAB",
    "onExchangeList": false
   },
   "EQR": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "EQR",
    "onExchangeList": false
   },
   "FCRX": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "FCRX",
    "onExchangeList": false
   },
   "FDP": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "FDP",
    "onExchangeList": false
   },
   "FIHL": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "FIHL",
    "onExchangeList": false
   },
   "GBTG": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "GBTG",
    "onExchangeList": false
   },
   "GTLS": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "GTLS",
    "onExchangeList": false
   },
   "HLX": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "HLX",
    "onExchangeList": false
   },
   "JHG": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "JHG",
    "onExchangeList": false
   },
   "KFS": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "KFS",
    "onExchangeList": false
   },
   "KORE": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "KORE",
    "onExchangeList": false
   },
   "KVUE": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "KVUE",
    "onExchangeList": false
   },
   "KW": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "KW",
    "onExchangeList": false
   },
   "LC": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "LC",
    "onExchangeList": false
   },
   "LEG": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "LEG",
    "onExchangeList": false
   },
   "MDV": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "MDV",
    "onExchangeList": false
   },
   "MPX": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "MPX",
    "onExchangeList": false
   },
   "MVO": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "MVO",
    "onExchangeList": false
   },
   "NSA": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "NSA",
    "onExchangeList": false
   },
   "NTZ": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "NTZ",
    "onExchangeList": false
   },
   "ODV": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "ODV",
    "onExchangeList": false
   },
   "PERF": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "PERF",
    "onExchangeList": false
   },
   "PRA": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "PRA",
    "onExchangeList": false
   },
   "RAMP": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "RAMP",
    "onExchangeList": false
   },
   "RMAX": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "RMAX",
    "onExchangeList": false
   },
   "RZB": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "RZB",
    "onExchangeList": false
   },
   "SAT": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "SAT",
    "onExchangeList": false
   },
   "SBXD": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "SBXD",
    "onExchangeList": false
   },
   "SEM": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "SEM",
    "onExchangeList": false
   },
   "SILA": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "SILA",
    "onExchangeList": false
   },
   "SKLZ": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "SKLZ",
    "onExchangeList": false
   },
   "SLAI": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "SLAI",
    "onExchangeList": false
   },
   "STEL": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "STEL",
    "onExchangeList": false
   },
   "THR": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "THR",
    "onExchangeList": false
   },
   "TMHC": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "TMHC",
    "onExchangeList": false
   },
   "TPH": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "TPH",
    "onExchangeList": false
   },
   "TPTA": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "TPTA",
    "onExchangeList": false
   },
   "TWO": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "TWO",
    "onExchangeList": false
   },
   "VACI": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "VACI",
    "onExchangeList": false
   },
   "VRE": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "VRE",
    "onExchangeList": false
   },
   "VSCO": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "VSCO",
    "onExchangeList": false
   },
   "WBS": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "WBS",
    "onExchangeList": false
   },
   "WEAV": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "WEAV",
    "onExchangeList": false
   },
   "WSR": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "WSR",
    "onExchangeList": false
   },
   "DX=F": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "DX=F",
    "onExchangeList": false
   },
   "^MERV": {
    "since": "2026-11-12",
-   "runs": 1,
+   "runs": 2,
    "listed": "^MERV",
    "onExchangeList": false
   }
