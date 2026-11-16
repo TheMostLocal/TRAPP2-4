@@ -5,6 +5,14 @@
 #  (data/master.csv + data/master.json, same columns), built for ~1,600 tickers instead of ~300.
 # ============================================================
 """
+z190 - A THROTTLED PROFILE NEVER BLANKS A ROW. Yahoo sometimes answers a profile request with an EMPTY profile rather
+than an error: 11-16 every TRAPP2-1 profile from 07:08:55 on came back {} (171 of 247) and was cached as fresh for 24 h -
+82 ETFs lost their names and fund flags, research graded them as companies with no data, the bot shorted four of them.
+Now an empty answer is never cached or used, a cached empty profile is never "fresh" (the next run asks again), a row
+with no usable profile keeps the previous row's profile fields (marked profileCarried), and statements are only
+requested for equities (an ETF, a currency or a future has none - three Yahoo calls each saved). Here an empty answer also counts as
+a rate-limit hit (the profile gate pauses, then stops asking).
+
 z187 - VALUATION AT THE LIVE PRICE, IN ONE CURRENCY (the z187 block below): P/B, P/S, EV ratios, P/E, market cap and
 yield are computed at this run's price from latest-quarter equity and trailing revenue converted to USD, with USD
 anchors on the row so the 15-minute refresh re-prices them. Changed company names are flagged (nameWas).
@@ -437,6 +445,8 @@ def save_profile_cache(cache):
 def profile_is_fresh(cache_entry, ticker=""):
     if not cache_entry or "fetched_at" not in cache_entry:
         return False
+    if not profile_ok(cache_entry.get("info")):            # z190: a cached empty profile is asked for again
+        return False
     try:
         fetched = datetime.fromisoformat(cache_entry["fetched_at"])
     except (ValueError, TypeError):
@@ -753,6 +763,8 @@ def carry_name_change(row, prev, today):
     """Keeps a 30-day 'nameWas' marker on a row whose company name changed (master.json only)."""
     if not prev:
         return None
+    if str(row.get("asset_class") or "Equity") != "Equity":
+        return None                                  # z190: no company behind a currency / future / index row
     if name_changed(prev.get("name"), row.get("name")):
         row["nameWas"], row["nameChangedAt"] = prev.get("name"), today
         return prev.get("name")
@@ -1019,19 +1031,28 @@ def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None, pric
                 else:
                     raw_info = t.info or {}
                 info = _trim_info(raw_info)
-                profile_fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-                with _CACHE_LOCK:
-                    profile_cache[ticker] = {"info": info, "fetched_at": profile_fetched_at,
-                                             "px": profile_price({}, raw_info) or price}   # z187: the ratios' price
-                refreshed = True
+                if profile_ok(info):
+                    profile_fetched_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                    with _CACHE_LOCK:
+                        profile_cache[ticker] = {"info": info, "fetched_at": profile_fetched_at,
+                                                 "px": profile_price({}, raw_info) or price}   # z187: the ratios' price
+                    refreshed = True
+                else:
+                    # z190: an empty answer is Yahoo throttling without saying so - pause like a rate limit, cache
+                    # nothing, keep the last good profile
+                    with _CACHE_LOCK:
+                        _EMPTY["n"] += 1
+                    if gate is not None:
+                        gate.hit(ticker)
+                    info = cached.get("info") if profile_ok(cached.get("info")) else {}
             except Exception as e:
                 if gate is not None and _rate_limited(e):
                     gate.hit(ticker)
                 else:
                     log(f"  ⚠ {ticker} .info failed: {e}")
-                info = cached.get("info") or {}
+                info = cached.get("info") if profile_ok(cached.get("info")) else {}
         else:
-            info = cached.get("info") or {}                   # the run stopped asking: keep the last profile
+            info = cached.get("info") if profile_ok(cached.get("info")) else {}   # the run stopped asking: last good one
 
     row = {
         "ticker": ticker,
@@ -1128,6 +1149,8 @@ def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None, pric
         entry = profile_cache.get(ticker) or {}
         bs = dict(entry.get("bs")) if isinstance(entry.get("bs"), dict) else {}
         want = refreshed or bs.get("checked") != profile_fetched_at
+        if str((info or {}).get("quoteType") or "").upper() != "EQUITY":
+            want = False                                             # z190: funds / indices have no statements
         if want and gate is not None and not gate.ok():
             want = False
         if want and not refreshed:                               # a pre-z187 cache: migrate a few hundred a night
@@ -1156,6 +1179,8 @@ def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None, pric
     except Exception:
         pass
     apply_valuation(row, info, bs, price, profile_price(profile_cache.get(ticker), info))   # z187
+    if not profile_ok(info):
+        row["_noProfile"] = True                     # z190: main() lends it the previous row's profile fields
 
     # Inject classifier-derived sector/industry/asset_class for non-equity
     # instruments (futures, FX, crypto, indices, mutual funds, private, options).
@@ -1174,6 +1199,36 @@ def fetch_quote(ticker, profile_cache, bulk=None, gate=None, info_sem=None, pric
     if not row.get("name") and LISTING_NAMES.get(ticker):      # z183: the exchange list's name until the profile arrives
         row["name"] = LISTING_NAMES[ticker]
     return row
+
+
+def profile_ok(info):
+    """z190: a real Yahoo profile says what it is (quoteType) and names it; {} or a stub ({'trailingPegRatio': None},
+    what a throttled request returns) is not one - never cached, never used, never "fresh"."""
+    return (isinstance(info, dict) and bool(info.get("quoteType"))
+            and bool(info.get("shortName") or info.get("longName") or info.get("symbol") or info.get("currency")))
+
+
+# z190: what the previous row may lend a row that has no usable profile this run - everything but today's quote
+QUOTE_FIELDS = {"ticker", "price", "volume", "priceopen", "low", "high", "close", "change", "changepct", "closeyest",
+                "date", "high52", "low52", "fetched_at", "asset_class", "priceSource", "symbolListed"}
+
+
+def carry_profile(row, prev):
+    """z190: no usable profile this run (Yahoo answered empty, or the run stopped asking) - keep the previous row's name,
+    sector, fund flags, fundamentals and valuation anchors instead of writing blanks (the 15-minute refresh re-prices the
+    multiples from the anchors); the quote fields stay today's. Returns 1 when something was carried."""
+    if not prev or not (prev.get("name") or prev.get("sector") or str(prev.get("isetf")) == "true"):
+        return 0
+    for k, v in prev.items():
+        if k in QUOTE_FIELDS or k in ("profileCarried",) or v in (None, ""):
+            continue
+        if k in ("isetf", "isfund") or row.get(k) in (None, ""):
+            row[k] = v
+    row["profileCarried"] = prev.get("profile_fetched_at") or "previous row"
+    return 1
+
+
+_EMPTY = {"n": 0}                                   # z190: empty profile answers this run (not cached)
 
 
 def _previous_rows():
@@ -1271,8 +1326,11 @@ def main():
     # every ticker keeps a row: fresh, else yesterday's (a Yahoo hiccup must not drop names from the app)
     rows, carried, missing = [], 0, []
     today, renamed = datetime.now(timezone.utc).strftime("%Y-%m-%d"), []
+    n_carried = 0
     for t in tickers:
         if t in rows_by:
+            if rows_by[t].pop("_noProfile", False):
+                n_carried += carry_profile(rows_by[t], previous.get(t))                 # z190
             was = carry_name_change(rows_by[t], previous.get(t), today)                # z187
             if was:
                 renamed.append(f"{t} ('{was}' -> '{rows_by[t].get('name')}')")
@@ -1301,6 +1359,8 @@ def main():
         f"{' · Yahoo prices paused ' + str(price_gate.pauses) + 'x' if price_gate.pauses else ''}{', then stopped' if price_gate.closed else ''} · "
         f"{carried} kept their previous row · {len(failed)} failed · {len(skipped)} past the budget (no Yahoo) · {len(rows)} rows written · "
         f"{(time.time() - t0) / 60:.1f} min")
+    log(f"  profiles: {_EMPTY['n']} empty answers (not cached, counted as rate limits) · "
+        f"{n_carried} rows kept their previous profile")                                  # z190
     if renamed:
         log(f"  ⚠ {len(renamed)} company name(s) changed - renamed, or the symbol now belongs to another company "
             f"(check tickers.txt): " + "; ".join(renamed))
