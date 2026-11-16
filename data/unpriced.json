@@ -1,17 +1,17 @@
 {
- "asOf": "2026-11-15T07:49:14+00:00",
+ "asOf": "2026-11-16T08:00:27+00:00",
  "of": 1648,
  "count": 2,
  "tickers": {
   "DX=F": {
    "since": "2026-11-12",
-   "runs": 5,
+   "runs": 6,
    "listed": "DX=F",
    "onExchangeList": false
   },
   "^MERV": {
    "since": "2026-11-12",
-   "runs": 5,
+   "runs": 6,
    "listed": "^MERV",
    "onExchangeList": false
   }
