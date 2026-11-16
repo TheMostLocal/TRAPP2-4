@@ -20,6 +20,8 @@ name: Nightly Full Refresh
 #
 # 00:30 UTC = 8:30 PM ET (EDT). Runs after US close, before pre-market data.
 
+# z189: queued on time by the session loop (TRAPP2-CORE pipeline/ontime.py) on trading-day evenings; this cron is
+# the backstop (GitHub starts it 6-7 h late) and stands down in the gate when the on-time run already happened.
 on:
   schedule:
   # z150: off GitHub's busy top / half of the hour, and 10 min after TRAPP2-2's same job (spreads the Yahoo load)
@@ -31,7 +33,42 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  gate:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read                 # z189: to see whether the on-time run already started
+    outputs:
+      run: ${{ steps.g.outputs.run }}
+    steps:
+      - id: g
+        name: Late-start check (z189)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN=true
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            S="${{ github.event.schedule }}"
+            UM=$(echo "$S" | awk '{print $1}'); UH=$(echo "$S" | awk '{print $2}')
+            # z189: TRAPP2-CORE's session loop (pipeline/ontime.py, trading-day evenings) queues this workflow at its slot -
+            # GitHub starts this account's crons 6-7 h late. A late scheduled start stands down when an on-time or manual run has
+            # started since the slot (one that failed or was cancelled doesn't count - then this late start is the retry).
+            # Can't tell -> run.
+            if [ "$RUN" = true ]; then
+              SLOT=$(date -u -d "$(date -u +%F) $(printf '%02d:%02d' "$((10#$UH))" "$((10#$UM))")" +%s); NOW=$(date -u +%s)
+              [ "$SLOT" -gt "$NOW" ] && SLOT=$(( SLOT - 86400 ))
+              SINCE=$(date -u -d "@$(( SLOT - 600 ))" +%Y-%m-%dT%H:%M:%SZ)
+              WF="${GITHUB_WORKFLOW_REF%@*}"; WF="${WF##*/}"
+              N=$(gh run list -R "$GITHUB_REPOSITORY" -w "$WF" -L 30 --json databaseId,event,createdAt,conclusion \
+                    --jq "[.[] | select(.event == \"workflow_dispatch\" and .createdAt >= \"$SINCE\" and .databaseId != $GITHUB_RUN_ID and .conclusion != \"failure\" and .conclusion != \"cancelled\" and .conclusion != \"timed_out\")] | length" 2>/dev/null || true)
+              echo "slot $(date -u -d "@$SLOT" +%H:%M) UTC · this start $(( (NOW - SLOT) / 60 )) min after it · on-time / manual runs since: ${N:-unknown}"
+              if [ -n "$N" ] && [ "$N" -gt 0 ] 2>/dev/null; then RUN=false; echo "already ran on time - this late start stands down"; fi
+            fi
+          fi
+          echo "run=${RUN}" >> "$GITHUB_OUTPUT"
+
   refresh:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 200
     permissions:
