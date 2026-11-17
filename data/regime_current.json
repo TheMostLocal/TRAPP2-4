@@ -47,9 +47,9 @@
     },
     {
       "signal": "macro",
-      "score": 0.543,
+      "score": 0.536,
       "confidence": 1.0,
-      "weight": 0.543,
+      "weight": 0.536,
       "direction": "bullish"
     }
   ],
@@ -57,17 +57,17 @@
     "macro": {
       "avg_1m_sector_return": 0.0303,
       "n_sectors": 11,
-      "indpro_yoy": 0.0225
+      "indpro_yoy": 0.0215
     },
     "liquidity": {
       "t10y2y": 0.29,
-      "hy_spread": 3.23,
-      "hy_spread_z": 0.51,
+      "hy_spread": 3.34,
+      "hy_spread_z": 0.84,
       "hyg_minus_lqd_1m": 0.0002
     },
     "volatility": {
-      "vix_level": 19.3,
-      "vix9d_over_vix": 1.1995
+      "vix_level": 22.91,
+      "vix9d_over_vix": 1.0105
     },
     "valuation": {
       "spy_pe": 23.63,
