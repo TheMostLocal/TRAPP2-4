@@ -6,7 +6,7 @@
     "macro": 0.293,
     "liquidity": 0.0,
     "volatility": -0.149,
-    "valuation": -0.256,
+    "valuation": -0.253,
     "trend": 0.486,
     "breadth": 0.273,
     "commodity": -0.268,
@@ -25,7 +25,7 @@
   "current_probabilities": {
     "expansion": 0.132,
     "risk_on_melt_up": 0.0081,
-    "inflation_shock": 0.0478,
+    "inflation_shock": 0.0479,
     "recession_fear": 0.0195,
     "risk_off": 0.1572,
     "neutral": 0.6353
@@ -72,8 +72,8 @@
     "valuation": {
       "spy_pe": 23.76,
       "earnings_yield": 0.0421,
-      "real_10y": 0.0107,
-      "fed_model_spread": 0.0314
+      "real_10y": 0.0104,
+      "fed_model_spread": 0.0317
     },
     "trend": {
       "spy_price": 739.95,
