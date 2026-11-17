@@ -6,7 +6,7 @@
     "macro": 0.543,
     "liquidity": -0.015,
     "volatility": -0.456,
-    "valuation": -0.249,
+    "valuation": -0.25,
     "trend": 0.598,
     "breadth": 0.273,
     "commodity": -0.268,
@@ -100,6 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-17T16:37:04+00:00",
+  "computed_at": "2026-11-17T16:38:13+00:00",
   "inputs_complete": true
 }
