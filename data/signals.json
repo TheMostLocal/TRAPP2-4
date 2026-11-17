@@ -1,27 +1,27 @@
 {
   "_schema": "valuatio-signals-v1",
-  "updatedAt": "2026-11-17T17:37:09.824174Z",
+  "updatedAt": "2026-11-17T17:52:10.340893Z",
   "tickerCount": 22,
   "signals": {
     "macro": {
-      "raw": 0.5357994400688144,
+      "raw": 0.29337025853786564,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "avg_1m_sector_return": 0.0303,
+        "avg_1m_sector_return": 0.0101,
         "n_sectors": 11,
         "indpro_yoy": 0.0215
       }
     },
     "liquidity": {
-      "raw": -0.0646514009454474,
+      "raw": 1.4713648579717242e-05,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
         "t10y2y": 0.29,
         "hy_spread": 3.34,
         "hy_spread_z": 0.84,
-        "hyg_minus_lqd_1m": 0.0002
+        "hyg_minus_lqd_1m": 0.0041
       }
     },
     "volatility": {
@@ -34,25 +34,25 @@
       }
     },
     "valuation": {
-      "raw": -0.25655689171974344,
+      "raw": -0.2529699396622207,
       "confidence": 0.85,
       "tier": "LIVE",
       "note": {
-        "spy_pe": 23.77,
+        "spy_pe": 23.73,
         "earnings_yield": 0.0421,
         "real_10y": 0.0107,
-        "fed_model_spread": 0.0314
+        "fed_model_spread": 0.0315
       }
     },
     "trend": {
-      "raw": 0.5975601350179407,
+      "raw": 0.48571280671937356,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "spy_price": 754.37,
-        "sma50": 764.43,
-        "sma200": 731.92,
-        "pct_above_200dma": 0.0307
+        "spy_price": 739.95,
+        "sma50": 763.82,
+        "sma200": 732.16,
+        "pct_above_200dma": 0.0106
       }
     },
     "breadth": {
@@ -78,13 +78,13 @@
       }
     },
     "crypto": {
-      "raw": -0.7213149228570389,
+      "raw": -0.7258898161441744,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "btc_30d_return": -0.1987,
-        "btc_pct_from_50dma": -0.1812,
-        "eth_30d_return": -0.2415,
+        "btc_30d_return": -0.2031,
+        "btc_pct_from_50dma": -0.1828,
+        "eth_30d_return": -0.2419,
         "n_components": 3
       }
     }
