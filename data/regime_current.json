@@ -39,18 +39,18 @@
       "direction": "bearish"
     },
     {
-      "signal": "volatility",
-      "score": -0.597,
-      "confidence": 1.0,
-      "weight": 0.597,
-      "direction": "bearish"
-    },
-    {
       "signal": "trend",
       "score": 0.486,
       "confidence": 1.0,
       "weight": 0.486,
       "direction": "bullish"
+    },
+    {
+      "signal": "volatility",
+      "score": -0.426,
+      "confidence": 1.0,
+      "weight": 0.426,
+      "direction": "bearish"
     }
   ],
   "signal_notes": {
@@ -61,13 +61,13 @@
     },
     "liquidity": {
       "t10y2y": 0.3,
-      "hy_spread": 3.34,
-      "hy_spread_z": 0.84,
+      "hy_spread": 3.43,
+      "hy_spread_z": 1.11,
       "hyg_minus_lqd_1m": 0.0041
     },
     "volatility": {
-      "vix_level": 22.91,
-      "vix9d_over_vix": 1.1654
+      "vix_level": 25.46,
+      "vix9d_over_vix": 1.0487
     },
     "valuation": {
       "spy_pe": 23.85,
