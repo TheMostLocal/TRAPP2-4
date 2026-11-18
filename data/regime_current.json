@@ -5,11 +5,11 @@
   "scores": {
     "macro": 0.293,
     "liquidity": 0.002,
-    "volatility": -0.149,
-    "valuation": -0.253,
+    "volatility": -0.597,
+    "valuation": -0.275,
     "trend": 0.486,
     "breadth": 0.273,
-    "commodity": -0.268,
+    "commodity": -0.25,
     "crypto": -0.726
   },
   "signal_confidences": {
@@ -23,12 +23,12 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.1324,
-    "risk_on_melt_up": 0.0081,
-    "inflation_shock": 0.0477,
-    "recession_fear": 0.0195,
-    "risk_off": 0.1568,
-    "neutral": 0.6354
+    "expansion": 0.0773,
+    "risk_on_melt_up": 0.0033,
+    "inflation_shock": 0.0716,
+    "recession_fear": 0.0419,
+    "risk_off": 0.2597,
+    "neutral": 0.5462
   },
   "drivers": [
     {
@@ -39,17 +39,17 @@
       "direction": "bearish"
     },
     {
+      "signal": "volatility",
+      "score": -0.597,
+      "confidence": 1.0,
+      "weight": 0.597,
+      "direction": "bearish"
+    },
+    {
       "signal": "trend",
       "score": 0.486,
       "confidence": 1.0,
       "weight": 0.486,
-      "direction": "bullish"
-    },
-    {
-      "signal": "macro",
-      "score": 0.293,
-      "confidence": 1.0,
-      "weight": 0.293,
       "direction": "bullish"
     }
   ],
@@ -67,13 +67,13 @@
     },
     "volatility": {
       "vix_level": 22.91,
-      "vix9d_over_vix": 1.0105
+      "vix9d_over_vix": 1.1654
     },
     "valuation": {
-      "spy_pe": 23.76,
-      "earnings_yield": 0.0421,
+      "spy_pe": 24.0,
+      "earnings_yield": 0.0417,
       "real_10y": 0.0104,
-      "fed_model_spread": 0.0317
+      "fed_model_spread": 0.0313
     },
     "trend": {
       "spy_price": 739.95,
@@ -87,10 +87,10 @@
       "n_total": 11
     },
     "commodity": {
-      "copper_60d_return": -0.0928,
-      "oil_60d_return": -0.1618,
-      "gold_oil_ratio": 45.159,
-      "gold_oil_zscore": -0.883,
+      "copper_60d_return": -0.0917,
+      "oil_60d_return": -0.1479,
+      "gold_oil_ratio": 44.796,
+      "gold_oil_zscore": -0.904,
       "n_components": 3
     },
     "crypto": {
@@ -100,6 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-18T00:07:11+00:00",
+  "computed_at": "2026-11-18T03:46:12+00:00",
   "inputs_complete": true
 }
