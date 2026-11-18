@@ -1,6 +1,6 @@
 {
   "_schema": "valuatio-signals-v1",
-  "updatedAt": "2026-11-18T22:52:03.671999Z",
+  "updatedAt": "2026-11-18T23:06:54.117490Z",
   "tickerCount": 22,
   "signals": {
     "macro": {
@@ -14,11 +14,11 @@
       }
     },
     "liquidity": {
-      "raw": -0.045444625079105766,
+      "raw": -0.05211129174577242,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "t10y2y": 0.3,
+        "t10y2y": 0.27,
         "hy_spread": 3.43,
         "hy_spread_z": 1.11,
         "hyg_minus_lqd_1m": 0.0034
