@@ -14,23 +14,23 @@
       }
     },
     "liquidity": {
-      "raw": -0.05211129174577242,
+      "raw": -0.06637367294937226,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
         "t10y2y": 0.27,
-        "hy_spread": 3.43,
-        "hy_spread_z": 1.11,
+        "hy_spread": 3.47,
+        "hy_spread_z": 1.23,
         "hyg_minus_lqd_1m": 0.0034
       }
     },
     "volatility": {
-      "raw": 0.11454359780047155,
+      "raw": -0.027814332247557194,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "vix_level": 25.46,
-        "vix9d_over_vix": 0.9407
+        "vix_level": 24.56,
+        "vix9d_over_vix": 0.9752
       }
     },
     "valuation": {
