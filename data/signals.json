@@ -14,11 +14,11 @@
       }
     },
     "liquidity": {
-      "raw": -0.2056699485775461,
+      "raw": -0.20344772635532388,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "t10y2y": 0.27,
+        "t10y2y": 0.28,
         "hy_spread": 3.47,
         "hy_spread_z": 1.23,
         "hyg_minus_lqd_1m": -0.005
