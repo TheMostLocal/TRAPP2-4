@@ -5,11 +5,11 @@
   "scores": {
     "macro": 0.147,
     "liquidity": -0.052,
-    "volatility": -0.426,
-    "valuation": -0.267,
+    "volatility": 0.115,
+    "valuation": -0.273,
     "trend": 0.421,
     "breadth": 0.091,
-    "commodity": -0.25,
+    "commodity": -0.35,
     "crypto": -0.728
   },
   "signal_confidences": {
@@ -23,12 +23,12 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.049,
-    "risk_on_melt_up": 0.0017,
-    "inflation_shock": 0.0805,
-    "recession_fear": 0.0568,
-    "risk_off": 0.2936,
-    "neutral": 0.5184
+    "expansion": 0.0917,
+    "risk_on_melt_up": 0.0052,
+    "inflation_shock": 0.0441,
+    "recession_fear": 0.0267,
+    "risk_off": 0.1798,
+    "neutral": 0.6525
   },
   "drivers": [
     {
@@ -39,18 +39,18 @@
       "direction": "bearish"
     },
     {
-      "signal": "volatility",
-      "score": -0.426,
-      "confidence": 1.0,
-      "weight": 0.426,
-      "direction": "bearish"
-    },
-    {
       "signal": "trend",
       "score": 0.421,
       "confidence": 1.0,
       "weight": 0.421,
       "direction": "bullish"
+    },
+    {
+      "signal": "commodity",
+      "score": -0.35,
+      "confidence": 1.0,
+      "weight": 0.35,
+      "direction": "bearish"
     }
   ],
   "signal_notes": {
@@ -67,13 +67,13 @@
     },
     "volatility": {
       "vix_level": 25.46,
-      "vix9d_over_vix": 1.0487
+      "vix9d_over_vix": 0.9407
     },
     "valuation": {
-      "spy_pe": 23.93,
-      "earnings_yield": 0.0418,
+      "spy_pe": 24.0,
+      "earnings_yield": 0.0417,
       "real_10y": 0.0102,
-      "fed_model_spread": 0.0316
+      "fed_model_spread": 0.0315
     },
     "trend": {
       "spy_price": 732.44,
@@ -87,10 +87,10 @@
       "n_total": 11
     },
     "commodity": {
-      "copper_60d_return": -0.0917,
-      "oil_60d_return": -0.1479,
-      "gold_oil_ratio": 44.796,
-      "gold_oil_zscore": -0.904,
+      "copper_60d_return": -0.1375,
+      "oil_60d_return": -0.1806,
+      "gold_oil_ratio": 45.68,
+      "gold_oil_zscore": -0.83,
       "n_components": 3
     },
     "crypto": {
@@ -100,6 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-19T00:07:04+00:00",
+  "computed_at": "2026-11-19T02:01:26+00:00",
   "inputs_complete": true
 }
