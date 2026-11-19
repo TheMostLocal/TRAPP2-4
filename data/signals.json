@@ -1,27 +1,27 @@
 {
   "_schema": "valuatio-signals-v1",
-  "updatedAt": "2026-11-19T17:22:10.627166Z",
+  "updatedAt": "2026-11-19T17:37:09.659515Z",
   "tickerCount": 22,
   "signals": {
     "macro": {
-      "raw": 0.146678605715736,
+      "raw": 0.13376508084074118,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "avg_1m_sector_return": -0.0021,
+        "avg_1m_sector_return": -0.0032,
         "n_sectors": 11,
         "indpro_yoy": 0.0215
       }
     },
     "liquidity": {
-      "raw": -0.06637367294937226,
+      "raw": -0.2056699485775461,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
         "t10y2y": 0.27,
         "hy_spread": 3.47,
         "hy_spread_z": 1.23,
-        "hyg_minus_lqd_1m": 0.0034
+        "hyg_minus_lqd_1m": -0.005
       }
     },
     "volatility": {
@@ -34,25 +34,25 @@
       }
     },
     "valuation": {
-      "raw": -0.2506397328444584,
+      "raw": -0.2599548986105689,
       "confidence": 0.85,
       "tier": "LIVE",
       "note": {
-        "spy_pe": 23.75,
-        "earnings_yield": 0.0421,
+        "spy_pe": 23.85,
+        "earnings_yield": 0.0419,
         "real_10y": 0.0102,
-        "fed_model_spread": 0.0319
+        "fed_model_spread": 0.0317
       }
     },
     "trend": {
-      "raw": 0.42136972504399056,
+      "raw": 0.3930084522342947,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "spy_price": 732.44,
-        "sma50": 763.15,
-        "sma200": 732.34,
-        "pct_above_200dma": 0.0001
+        "spy_price": 730.2,
+        "sma50": 762.51,
+        "sma200": 732.55,
+        "pct_above_200dma": -0.0032
       }
     },
     "breadth": {
@@ -78,13 +78,13 @@
       }
     },
     "crypto": {
-      "raw": -0.7278852022848016,
+      "raw": -0.7657842588104556,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "btc_30d_return": -0.2088,
-        "btc_pct_from_50dma": -0.1785,
-        "eth_30d_return": -0.2432,
+        "btc_30d_return": -0.2305,
+        "btc_pct_from_50dma": -0.1984,
+        "eth_30d_return": -0.262,
         "n_components": 3
       }
     }
