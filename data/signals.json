@@ -1,6 +1,6 @@
 {
   "_schema": "valuatio-signals-v1",
-  "updatedAt": "2026-11-19T19:52:04.931733Z",
+  "updatedAt": "2026-11-19T20:07:13.089049Z",
   "tickerCount": 22,
   "signals": {
     "macro": {
@@ -34,14 +34,14 @@
       }
     },
     "valuation": {
-      "raw": -0.2392268891568129,
+      "raw": -0.23276362291765912,
       "confidence": 0.85,
       "tier": "LIVE",
       "note": {
-        "spy_pe": 23.62,
-        "earnings_yield": 0.0423,
+        "spy_pe": 23.55,
+        "earnings_yield": 0.0425,
         "real_10y": 0.0102,
-        "fed_model_spread": 0.0321
+        "fed_model_spread": 0.0323
       }
     },
     "trend": {
