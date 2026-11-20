@@ -1,6 +1,6 @@
 {
   "date": "2026-11-20",
-  "regime": "risk_off",
+  "regime": "neutral",
   "confidence": 0.981,
   "scores": {
     "macro": 0.134,
@@ -40,9 +40,9 @@
     },
     {
       "signal": "volatility",
-      "score": -0.652,
+      "score": -0.425,
       "confidence": 1.0,
-      "weight": 0.652,
+      "weight": 0.425,
       "direction": "bearish"
     },
     {
@@ -61,13 +61,13 @@
     },
     "liquidity": {
       "t10y2y": 0.28,
-      "hy_spread": 3.47,
-      "hy_spread_z": 1.23,
+      "hy_spread": 3.52,
+      "hy_spread_z": 1.39,
       "hyg_minus_lqd_1m": -0.005
     },
     "volatility": {
-      "vix_level": 24.56,
-      "vix9d_over_vix": 1.1914
+      "vix_level": 28.44,
+      "vix9d_over_vix": 1.0288
     },
     "valuation": {
       "spy_pe": 23.55,
