@@ -6,7 +6,7 @@
     "macro": -0.18,
     "liquidity": -0.181,
     "volatility": -0.425,
-    "valuation": -0.196,
+    "valuation": -0.195,
     "trend": 0.281,
     "breadth": -0.091,
     "commodity": -0.348,
@@ -100,6 +100,94 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-20T20:52:05+00:00",
-  "inputs_complete": true
+  "computed_at": "2026-11-20T21:05:02+00:00",
+  "inputs_complete": true,
+  "transitions": {
+    "1_step": {
+      "expansion": 0.1667,
+      "risk_on_melt_up": 0.1667,
+      "inflation_shock": 0.1667,
+      "recession_fear": 0.1667,
+      "risk_off": 0.1667,
+      "neutral": 0.1667
+    },
+    "5_step": {
+      "expansion": 0.136,
+      "risk_on_melt_up": 0.136,
+      "inflation_shock": 0.136,
+      "recession_fear": 0.136,
+      "risk_off": 0.1544,
+      "neutral": 0.3015
+    },
+    "20_step": {
+      "expansion": 0.1346,
+      "risk_on_melt_up": 0.1346,
+      "inflation_shock": 0.1346,
+      "recession_fear": 0.1346,
+      "risk_off": 0.1538,
+      "neutral": 0.3077
+    }
+  },
+  "stationary": {
+    "expansion": 0.1346,
+    "risk_on_melt_up": 0.1346,
+    "inflation_shock": 0.1346,
+    "recession_fear": 0.1346,
+    "risk_off": 0.1538,
+    "neutral": 0.3077
+  },
+  "expected_persistence_days": 1.2,
+  "transition_matrix": [
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667,
+      0.1667
+    ],
+    [
+      0.0625,
+      0.0625,
+      0.0625,
+      0.0625,
+      0.125,
+      0.625
+    ]
+  ],
+  "transition_observation_count": 10,
+  "transition_warning": "Only 10 transitions observed \u2014 need \u226560 for high confidence",
+  "transitions_computed_at": "2026-11-20T21:05:02+00:00"
 }
