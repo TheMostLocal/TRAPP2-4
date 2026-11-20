@@ -6,7 +6,7 @@
     "macro": -0.18,
     "liquidity": -0.181,
     "volatility": -0.425,
-    "valuation": -0.225,
+    "valuation": -0.226,
     "trend": 0.281,
     "breadth": -0.091,
     "commodity": -0.348,
@@ -70,7 +70,7 @@
       "vix9d_over_vix": 1.0288
     },
     "valuation": {
-      "spy_pe": 23.49,
+      "spy_pe": 23.5,
       "earnings_yield": 0.0426,
       "real_10y": 0.0099,
       "fed_model_spread": 0.0327
@@ -100,6 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-20T17:22:05+00:00",
+  "computed_at": "2026-11-20T17:37:06+00:00",
   "inputs_complete": true
 }
