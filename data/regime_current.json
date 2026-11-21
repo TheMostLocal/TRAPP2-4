@@ -5,11 +5,11 @@
   "scores": {
     "macro": -0.18,
     "liquidity": -0.178,
-    "volatility": -0.425,
-    "valuation": -0.19,
+    "volatility": -0.781,
+    "valuation": -0.083,
     "trend": 0.281,
     "breadth": -0.091,
-    "commodity": -0.348,
+    "commodity": -0.304,
     "crypto": -0.795
   },
   "signal_confidences": {
@@ -23,12 +23,12 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.0098,
-    "risk_on_melt_up": 0.0002,
-    "inflation_shock": 0.09,
-    "recession_fear": 0.1502,
-    "risk_off": 0.4331,
-    "neutral": 0.3167
+    "expansion": 0.005,
+    "risk_on_melt_up": 0.0001,
+    "inflation_shock": 0.1076,
+    "recession_fear": 0.1941,
+    "risk_off": 0.4794,
+    "neutral": 0.2139
   },
   "drivers": [
     {
@@ -40,16 +40,16 @@
     },
     {
       "signal": "volatility",
-      "score": -0.425,
+      "score": -0.781,
       "confidence": 1.0,
-      "weight": 0.425,
+      "weight": 0.781,
       "direction": "bearish"
     },
     {
       "signal": "commodity",
-      "score": -0.348,
+      "score": -0.304,
       "confidence": 1.0,
-      "weight": 0.348,
+      "weight": 0.304,
       "direction": "bearish"
     }
   ],
@@ -67,13 +67,13 @@
     },
     "volatility": {
       "vix_level": 28.44,
-      "vix9d_over_vix": 1.0288
+      "vix9d_over_vix": 1.4318
     },
     "valuation": {
-      "spy_pe": 23.13,
-      "earnings_yield": 0.0432,
+      "spy_pe": 21.95,
+      "earnings_yield": 0.0456,
       "real_10y": 0.0096,
-      "fed_model_spread": 0.0336
+      "fed_model_spread": 0.036
     },
     "trend": {
       "spy_price": 715.87,
@@ -87,10 +87,10 @@
       "n_total": 11
     },
     "commodity": {
-      "copper_60d_return": -0.1618,
-      "oil_60d_return": -0.1754,
-      "gold_oil_ratio": 43.626,
-      "gold_oil_zscore": -0.977,
+      "copper_60d_return": -0.1827,
+      "oil_60d_return": -0.127,
+      "gold_oil_ratio": 42.322,
+      "gold_oil_zscore": -1.067,
       "n_components": 3
     },
     "crypto": {
@@ -100,6 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-21T01:07:53+00:00",
+  "computed_at": "2026-11-21T03:54:57+00:00",
   "inputs_complete": true
 }
