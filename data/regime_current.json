@@ -25,7 +25,7 @@
   "current_probabilities": {
     "expansion": 0.0089,
     "risk_on_melt_up": 0.0001,
-    "inflation_shock": 0.0974,
+    "inflation_shock": 0.0975,
     "recession_fear": 0.1404,
     "risk_off": 0.4526,
     "neutral": 0.3005
@@ -70,7 +70,7 @@
       "vix9d_over_vix": 1.0428
     },
     "valuation": {
-      "spy_pe": 21.85,
+      "spy_pe": 21.84,
       "earnings_yield": 0.0458,
       "real_10y": 0.0084,
       "fed_model_spread": 0.0374
@@ -100,6 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-24T20:52:04+00:00",
+  "computed_at": "2026-11-24T21:07:04+00:00",
   "inputs_complete": true
 }
