@@ -3,8 +3,8 @@
   "regime": "risk_off",
   "confidence": 0.981,
   "scores": {
-    "macro": -0.078,
-    "liquidity": -0.326,
+    "macro": -0.117,
+    "liquidity": -0.3,
     "volatility": -0.435,
     "valuation": -0.064,
     "trend": 0.289,
@@ -23,12 +23,12 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.0089,
+    "expansion": 0.0088,
     "risk_on_melt_up": 0.0001,
-    "inflation_shock": 0.0975,
-    "recession_fear": 0.1404,
-    "risk_off": 0.4526,
-    "neutral": 0.3005
+    "inflation_shock": 0.0988,
+    "recession_fear": 0.1445,
+    "risk_off": 0.4479,
+    "neutral": 0.2999
   },
   "drivers": [
     {
@@ -57,12 +57,12 @@
     "macro": {
       "avg_1m_sector_return": -0.0208,
       "n_sectors": 11,
-      "indpro_yoy": 0.0215
+      "indpro_yoy": 0.0166
     },
     "liquidity": {
-      "t10y2y": 0.29,
-      "hy_spread": 3.76,
-      "hy_spread_z": 2.14,
+      "t10y2y": 0.28,
+      "hy_spread": 3.63,
+      "hy_spread_z": 1.75,
       "hyg_minus_lqd_1m": -0.0076
     },
     "volatility": {
