@@ -6,7 +6,7 @@
     "macro": -0.047,
     "liquidity": -0.317,
     "volatility": -0.273,
-    "valuation": -0.151,
+    "valuation": -0.15,
     "trend": 0.252,
     "breadth": 0.091,
     "commodity": -0.304,
@@ -27,7 +27,7 @@
     "risk_on_melt_up": 0.0004,
     "inflation_shock": 0.0968,
     "recession_fear": 0.0993,
-    "risk_off": 0.3807,
+    "risk_off": 0.3806,
     "neutral": 0.4052
   },
   "drivers": [
@@ -100,6 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-25T19:52:03+00:00",
+  "computed_at": "2026-11-25T20:07:03+00:00",
   "inputs_complete": true
 }
