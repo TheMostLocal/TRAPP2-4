@@ -1,27 +1,27 @@
 {
   "_schema": "valuatio-signals-v1",
-  "updatedAt": "2026-11-26T02:08:44.594985Z",
+  "updatedAt": "2026-11-26T18:22:35.437135Z",
   "tickerCount": 22,
   "signals": {
     "macro": {
-      "raw": -0.04690670812158668,
+      "raw": -0.02147827543386316,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "avg_1m_sector_return": -0.015,
+        "avg_1m_sector_return": -0.0129,
         "n_sectors": 11,
         "indpro_yoy": 0.0166
       }
     },
     "liquidity": {
-      "raw": -0.32617268183229836,
+      "raw": -0.39175565365601167,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
         "t10y2y": 0.24,
         "hy_spread": 3.72,
         "hy_spread_z": 2.02,
-        "hyg_minus_lqd_1m": -0.0075
+        "hyg_minus_lqd_1m": -0.0114
       }
     },
     "volatility": {
@@ -45,23 +45,23 @@
       }
     },
     "trend": {
-      "raw": 0.2519529006553289,
+      "raw": 0.22502229047465228,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "spy_price": 718.78,
-        "sma50": 758.64,
-        "sma200": 733.04,
-        "pct_above_200dma": -0.0195
+        "spy_price": 716.7,
+        "sma50": 757.89,
+        "sma200": 733.16,
+        "pct_above_200dma": -0.0225
       }
     },
     "breadth": {
-      "raw": 0.09090909090909083,
+      "raw": 0.2727272727272727,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "pct_sectors_above_50dma": 0.545,
-        "n_above": 6,
+        "pct_sectors_above_50dma": 0.636,
+        "n_above": 7,
         "n_total": 11
       }
     },
@@ -78,13 +78,13 @@
       }
     },
     "crypto": {
-      "raw": -0.794426616893623,
+      "raw": -0.7787197210005896,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "btc_30d_return": -0.2534,
-        "btc_pct_from_50dma": -0.2101,
-        "eth_30d_return": -0.279,
+        "btc_30d_return": -0.2453,
+        "btc_pct_from_50dma": -0.1964,
+        "eth_30d_return": -0.2713,
         "n_components": 3
       }
     }

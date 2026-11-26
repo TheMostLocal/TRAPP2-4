@@ -3,14 +3,14 @@
   "regime": "risk_off",
   "confidence": 0.981,
   "scores": {
-    "macro": -0.047,
-    "liquidity": -0.326,
+    "macro": -0.021,
+    "liquidity": -0.392,
     "volatility": -0.712,
     "valuation": -0.157,
-    "trend": 0.252,
-    "breadth": 0.091,
+    "trend": 0.225,
+    "breadth": 0.273,
     "commodity": -0.259,
-    "crypto": -0.794
+    "crypto": -0.779
   },
   "signal_confidences": {
     "macro": 1.0,
@@ -23,19 +23,19 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.0079,
-    "risk_on_melt_up": 0.0001,
-    "inflation_shock": 0.1156,
-    "recession_fear": 0.1531,
-    "risk_off": 0.4614,
-    "neutral": 0.2618
+    "expansion": 0.0101,
+    "risk_on_melt_up": 0.0002,
+    "inflation_shock": 0.1206,
+    "recession_fear": 0.1394,
+    "risk_off": 0.4391,
+    "neutral": 0.2906
   },
   "drivers": [
     {
       "signal": "crypto",
-      "score": -0.794,
+      "score": -0.779,
       "confidence": 1.0,
-      "weight": 0.794,
+      "weight": 0.779,
       "direction": "bearish"
     },
     {
@@ -47,15 +47,15 @@
     },
     {
       "signal": "liquidity",
-      "score": -0.326,
+      "score": -0.392,
       "confidence": 1.0,
-      "weight": 0.326,
+      "weight": 0.392,
       "direction": "bearish"
     }
   ],
   "signal_notes": {
     "macro": {
-      "avg_1m_sector_return": -0.015,
+      "avg_1m_sector_return": -0.0129,
       "n_sectors": 11,
       "indpro_yoy": 0.0166
     },
@@ -63,7 +63,7 @@
       "t10y2y": 0.24,
       "hy_spread": 3.72,
       "hy_spread_z": 2.02,
-      "hyg_minus_lqd_1m": -0.0075
+      "hyg_minus_lqd_1m": -0.0114
     },
     "volatility": {
       "vix_level": 26.36,
@@ -76,14 +76,14 @@
       "fed_model_spread": 0.0354
     },
     "trend": {
-      "spy_price": 718.78,
-      "sma50": 758.64,
-      "sma200": 733.04,
-      "pct_above_200dma": -0.0195
+      "spy_price": 716.7,
+      "sma50": 757.89,
+      "sma200": 733.16,
+      "pct_above_200dma": -0.0225
     },
     "breadth": {
-      "pct_sectors_above_50dma": 0.545,
-      "n_above": 6,
+      "pct_sectors_above_50dma": 0.636,
+      "n_above": 7,
       "n_total": 11
     },
     "commodity": {
@@ -94,12 +94,12 @@
       "n_components": 3
     },
     "crypto": {
-      "btc_30d_return": -0.2534,
-      "btc_pct_from_50dma": -0.2101,
-      "eth_30d_return": -0.279,
+      "btc_30d_return": -0.2453,
+      "btc_pct_from_50dma": -0.1964,
+      "eth_30d_return": -0.2713,
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-26T02:08:44+00:00",
+  "computed_at": "2026-11-26T18:22:35+00:00",
   "inputs_complete": true
 }
