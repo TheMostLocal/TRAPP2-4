@@ -1,6 +1,6 @@
 {
   "_schema": "valuatio-signals-v1",
-  "updatedAt": "2026-11-27T16:37:04.643112Z",
+  "updatedAt": "2026-11-27T16:40:09.009552Z",
   "tickerCount": 22,
   "signals": {
     "macro": {
@@ -25,12 +25,12 @@
       }
     },
     "volatility": {
-      "raw": -0.712,
+      "raw": -0.7266666666666667,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "vix_level": 26.36,
-        "vix9d_over_vix": 1.1233
+        "vix_level": 26.8,
+        "vix9d_over_vix": 1.1049
       }
     },
     "valuation": {
