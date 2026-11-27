@@ -23,7 +23,7 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.0098,
+    "expansion": 0.0095,
     "risk_on_melt_up": 0.0002,
     "inflation_shock": 0.1135,
     "recession_fear": 0.144,
@@ -40,9 +40,9 @@
     },
     {
       "signal": "volatility",
-      "score": -0.712,
+      "score": -0.727,
       "confidence": 1.0,
-      "weight": 0.712,
+      "weight": 0.727,
       "direction": "bearish"
     },
     {
@@ -66,8 +66,8 @@
       "hyg_minus_lqd_1m": -0.0114
     },
     "volatility": {
-      "vix_level": 26.36,
-      "vix9d_over_vix": 1.1233
+      "vix_level": 26.8,
+      "vix9d_over_vix": 1.1049
     },
     "valuation": {
       "spy_pe": 23.21,
