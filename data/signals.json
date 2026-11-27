@@ -14,13 +14,13 @@
       }
     },
     "liquidity": {
-      "raw": -0.39175565365601167,
+      "raw": -0.4013831279245245,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
         "t10y2y": 0.24,
-        "hy_spread": 3.72,
-        "hy_spread_z": 2.02,
+        "hy_spread": 3.77,
+        "hy_spread_z": 2.16,
         "hyg_minus_lqd_1m": -0.0114
       }
     },
@@ -34,14 +34,14 @@
       }
     },
     "valuation": {
-      "raw": -0.18996549548128677,
+      "raw": -0.1851654954812867,
       "confidence": 0.85,
       "tier": "LIVE",
       "note": {
         "spy_pe": 23.24,
         "earnings_yield": 0.043,
-        "real_10y": 0.0083,
-        "fed_model_spread": 0.0347
+        "real_10y": 0.0077,
+        "fed_model_spread": 0.0353
       }
     },
     "trend": {
