@@ -1,6 +1,6 @@
 {
   "_schema": "valuatio-signals-v1",
-  "updatedAt": "2026-11-28T00:14:15.591427Z",
+  "updatedAt": "2026-11-28T01:26:06.333463Z",
   "tickerCount": 22,
   "signals": {
     "macro": {
@@ -25,23 +25,23 @@
       }
     },
     "volatility": {
-      "raw": -0.7266666666666667,
+      "raw": 0.2733333333333333,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
         "vix_level": 26.8,
-        "vix9d_over_vix": 1.1049
+        "vix9d_over_vix": 0.8993
       }
     },
     "valuation": {
-      "raw": -0.1851654954812867,
+      "raw": -0.15177705415856368,
       "confidence": 0.85,
       "tier": "LIVE",
       "note": {
-        "spy_pe": 23.24,
-        "earnings_yield": 0.043,
+        "spy_pe": 22.87,
+        "earnings_yield": 0.0437,
         "real_10y": 0.0077,
-        "fed_model_spread": 0.0353
+        "fed_model_spread": 0.036
       }
     },
     "trend": {
@@ -66,14 +66,14 @@
       }
     },
     "commodity": {
-      "raw": -0.27814793868298854,
+      "raw": -0.26828067121213084,
       "confidence": 1.0,
       "tier": "LIVE",
       "note": {
-        "copper_60d_return": -0.2036,
-        "oil_60d_return": -0.0945,
-        "gold_oil_ratio": 42.254,
-        "gold_oil_zscore": -1.05,
+        "copper_60d_return": -0.147,
+        "oil_60d_return": -0.1028,
+        "gold_oil_ratio": 44.156,
+        "gold_oil_zscore": -0.899,
         "n_components": 3
       }
     },

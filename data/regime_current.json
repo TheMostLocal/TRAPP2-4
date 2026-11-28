@@ -1,15 +1,15 @@
 {
   "date": "2026-11-28",
-  "regime": "risk_off",
+  "regime": "neutral",
   "confidence": 0.981,
   "scores": {
     "macro": -0.021,
     "liquidity": -0.399,
-    "volatility": -0.727,
-    "valuation": -0.185,
+    "volatility": 0.273,
+    "valuation": -0.152,
     "trend": 0.225,
     "breadth": 0.273,
-    "commodity": -0.278,
+    "commodity": -0.268,
     "crypto": -0.783
   },
   "signal_confidences": {
@@ -23,12 +23,12 @@
     "crypto": 1.0
   },
   "current_probabilities": {
-    "expansion": 0.0094,
-    "risk_on_melt_up": 0.0002,
-    "inflation_shock": 0.1141,
-    "recession_fear": 0.1467,
-    "risk_off": 0.4486,
-    "neutral": 0.281
+    "expansion": 0.0509,
+    "risk_on_melt_up": 0.0022,
+    "inflation_shock": 0.078,
+    "recession_fear": 0.0383,
+    "risk_off": 0.2167,
+    "neutral": 0.6139
   },
   "drivers": [
     {
@@ -39,18 +39,18 @@
       "direction": "bearish"
     },
     {
-      "signal": "volatility",
-      "score": -0.727,
-      "confidence": 1.0,
-      "weight": 0.727,
-      "direction": "bearish"
-    },
-    {
       "signal": "liquidity",
       "score": -0.399,
       "confidence": 1.0,
       "weight": 0.399,
       "direction": "bearish"
+    },
+    {
+      "signal": "volatility",
+      "score": 0.273,
+      "confidence": 1.0,
+      "weight": 0.273,
+      "direction": "bullish"
     }
   ],
   "signal_notes": {
@@ -67,13 +67,13 @@
     },
     "volatility": {
       "vix_level": 26.8,
-      "vix9d_over_vix": 1.1049
+      "vix9d_over_vix": 0.8993
     },
     "valuation": {
-      "spy_pe": 23.24,
-      "earnings_yield": 0.043,
+      "spy_pe": 22.87,
+      "earnings_yield": 0.0437,
       "real_10y": 0.0077,
-      "fed_model_spread": 0.0353
+      "fed_model_spread": 0.036
     },
     "trend": {
       "spy_price": 716.7,
@@ -87,10 +87,10 @@
       "n_total": 11
     },
     "commodity": {
-      "copper_60d_return": -0.2036,
-      "oil_60d_return": -0.0945,
-      "gold_oil_ratio": 42.254,
-      "gold_oil_zscore": -1.05,
+      "copper_60d_return": -0.147,
+      "oil_60d_return": -0.1028,
+      "gold_oil_ratio": 44.156,
+      "gold_oil_zscore": -0.899,
       "n_components": 3
     },
     "crypto": {
@@ -100,94 +100,6 @@
       "n_components": 3
     }
   },
-  "computed_at": "2026-11-28T00:14:15+00:00",
-  "inputs_complete": true,
-  "transitions": {
-    "1_step": {
-      "expansion": 0.0833,
-      "risk_on_melt_up": 0.0833,
-      "inflation_shock": 0.0833,
-      "recession_fear": 0.0833,
-      "risk_off": 0.5,
-      "neutral": 0.1667
-    },
-    "5_step": {
-      "expansion": 0.1147,
-      "risk_on_melt_up": 0.1147,
-      "inflation_shock": 0.1147,
-      "recession_fear": 0.1147,
-      "risk_off": 0.257,
-      "neutral": 0.2843
-    },
-    "20_step": {
-      "expansion": 0.1144,
-      "risk_on_melt_up": 0.1144,
-      "inflation_shock": 0.1144,
-      "recession_fear": 0.1144,
-      "risk_off": 0.2542,
-      "neutral": 0.2881
-    }
-  },
-  "stationary": {
-    "expansion": 0.1144,
-    "risk_on_melt_up": 0.1144,
-    "inflation_shock": 0.1144,
-    "recession_fear": 0.1144,
-    "risk_off": 0.2542,
-    "neutral": 0.2881
-  },
-  "expected_persistence_days": 2.0,
-  "transition_matrix": [
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667,
-      0.1667
-    ],
-    [
-      0.0833,
-      0.0833,
-      0.0833,
-      0.0833,
-      0.5,
-      0.1667
-    ],
-    [
-      0.0588,
-      0.0588,
-      0.0588,
-      0.0588,
-      0.1765,
-      0.5882
-    ]
-  ],
-  "transition_observation_count": 17,
-  "transition_warning": "Only 17 transitions observed \u2014 need \u226560 for high confidence",
-  "transitions_computed_at": "2026-11-28T00:14:15+00:00"
+  "computed_at": "2026-11-28T01:26:06+00:00",
+  "inputs_complete": true
 }
